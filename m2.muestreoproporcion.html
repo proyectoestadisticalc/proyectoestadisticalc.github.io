@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Distribución de Muestreo Proporción</title>
+  <style>
+    :root {
+      --verde: #006400;
+      --gris: #ccc;
+      --fondo: #111;
+      --panel: #222;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: var(--fondo);
+      color: var(--gris);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    main {
+      background-color: var(--panel);
+      padding: 2rem;
+      border-radius: 12px;
+      max-width: 700px;
+      width: 100%;
+      box-shadow: 0 0 15px var(--verde);
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      align-items: center;
+    }
+    h1 {
+      color: var(--verde);
+      text-align: center;
+      font-size: 2.2rem;
+      margin-bottom: 0.2rem;
+    }
+    .descripcion {
+      color: var(--gris);
+      font-style: italic;
+      text-align: center;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      width: 100%;
+    }
+    label {
+      font-weight: bold;
+      color: var(--gris);
+    }
+    input {
+      padding: 0.8rem;
+      border: none;
+      border-radius: 6px;
+      background-color: #333;
+      color: white;
+      font-size: 1rem;
+      transition: background-color 0.3s ease;
+    }
+    input:focus {
+      background-color: #444;
+      outline: none;
+    }
+    button {
+      padding: 0.9rem 1.5rem;
+      background-color: var(--verde);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 1.1rem;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #008000;
+    }
+    .botones {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+      width: 100%;
+    }
+    #resultado {
+      margin-top: 1rem;
+      font-size: 1.1rem;
+      text-align: center;
+      color: white;
+      min-height: 3em;
+    }
+    canvas {
+      max-width: 100%;
+      margin-top: 1rem;
+      border-radius: 8px;
+      background-color: #1a1a1a;
+      box-shadow: 0 0 8px var(--verde);
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Distribución de Muestreo para Proporción</h1>
+    <p class="descripcion">
+      Calcula la media, desviación estándar e intervalo de confianza de la distribución de muestreo para una proporción poblacional.
+    </p>
+
+    <form id="formulario">
+      <label for="proporcionPoblacion">Proporción poblacional (p):</label>
+      <input type="number" id="proporcionPoblacion" step="any" min="0" max="1" required />
+
+      <label for="tamanoMuestra">Tamaño de la muestra (n):</label>
+      <input type="number" id="tamanoMuestra" min="1" required />
+
+      <label for="confianza">Nivel de confianza (%):</label>
+      <input type="number" id="confianza" min="50" max="99.9" step="0.1" value="95" required />
+
+      <button type="submit">Calcular</button>
+    </form>
+
+    <div class="botones">
+      <button id="btnLimpiar" type="button">Limpiar</button>
+      <button id="btnRegresar" type="button">Regresar</button>
+    </div>
+
+    <div id="resultado"></div>
+    <canvas id="grafica"></canvas>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    const form = document.getElementById('formulario');
+    const resultado = document.getElementById('resultado');
+    const ctx = document.getElementById('grafica').getContext('2d');
+    let chart = null;
+
+    function zScore(confidence) {
+      const zValues = {
+        80: 1.2816,
+        85: 1.4395,
+        90: 1.6449,
+        95: 1.96,
+        98: 2.326,
+        99: 2.576,
+        99.9: 3.291
+      };
+      let closest = 95;
+      let minDiff = Math.abs(confidence - 95);
+      for (const key in zValues) {
+        let diff = Math.abs(confidence - key);
+        if (diff < minDiff) {
+          closest = key;
+          minDiff = diff;
+        }
+      }
+      return zValues[closest];
+    }
+
+    function crearDatosNormal(media, desviacion, rango = 4) {
+      const pasos = 200;
+      const datosX = [];
+      const datosY = [];
+      const start = media - rango * desviacion;
+      const end = media + rango * desviacion;
+      const step = (end - start) / pasos;
+
+      function pdf(x, mu, sigma) {
+        return (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * ((x - mu) / sigma) ** 2);
+      }
+
+      for (let i = 0; i <= pasos; i++) {
+        const x = start + i * step;
+        datosX.push(x);
+        datosY.push(pdf(x, media, desviacion));
+      }
+
+      return { x: datosX, y: datosY };
+    }
+
+    function dibujarGrafica(media, desviacion, z) {
+      const datos = crearDatosNormal(media, desviacion);
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: datos.x,
+          datasets: [{
+            label: 'Distribución de la Proporción Muestral',
+            data: datos.y,
+            borderColor: '#32CD32',
+            backgroundColor: 'rgba(50, 205, 50, 0.1)',
+            borderWidth: 2,
+            fill: true,
+            pointRadius: 0,
+            tension: 0.3
+          }]
+        },
+        options: {
+          responsive: true,
+          animation: { duration: 700 },
+          scales: {
+            x: {
+              type: 'linear',
+              title: { display: true, text: 'Proporción Muestral', color: 'white', font: { size: 14 } },
+              ticks: { color: 'white' },
+              grid: { color: '#444' },
+              min: media - 4 * desviacion,
+              max: media + 4 * desviacion
+            },
+            y: {
+              title: { display: true, text: 'Densidad de Probabilidad', color: 'white', font: { size: 14 } },
+              ticks: { color: 'white', beginAtZero: true },
+              grid: { color: '#444' }
+            }
+          },
+          plugins: {
+            legend: {
+              labels: { color: 'white', font: { size: 14 } }
+            },
+            tooltip: {
+              enabled: true,
+              callbacks: {
+                label: context => `Densidad: ${context.parsed.y.toFixed(5)}`
+              }
+            }
+          }
+        }
+      });
+    }
+
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const p = parseFloat(document.getElementById('proporcionPoblacion').value);
+      const n = parseInt(document.getElementById('tamanoMuestra').value);
+      const confianza = parseFloat(document.getElementById('confianza').value);
+
+      if (n <= 0 || p < 0 || p > 1 || confianza < 50 || confianza > 99.9) {
+        resultado.innerHTML = '<p style="color: #f44336;">Por favor, ingrese valores válidos.</p>';
+        return;
+      }
+
+      const mediaMuestral = p;
+      const errorEstandar = Math.sqrt((p * (1 - p)) / n);
+      const z = zScore(confianza);
+      const margenError = z * errorEstandar;
+      const li = mediaMuestral - margenError;
+      const ls = mediaMuestral + margenError;
+
+      resultado.innerHTML = `
+        <p><strong>Media muestral (p̂):</strong> ${mediaMuestral.toFixed(4)}</p>
+        <p><strong>Error estándar (σp̂):</strong> ${errorEstandar.toFixed(4)}</p>
+        <p><strong>Intervalo de confianza ${confianza}%:</strong> (${li.toFixed(4)}, ${ls.toFixed(4)})</p>
+      `;
+
+      dibujarGrafica(mediaMuestral, errorEstandar, z);
+    });
+
+    document.getElementById('btnLimpiar').addEventListener('click', () => {
+      form.reset();
+      resultado.innerHTML = '';
+      if (chart) {
+        chart.destroy();
+        chart = null;
+      }
+    });
+
+    document.getElementById('btnRegresar').addEventListener('click', () => {
+      window.location.href = 'modulo2.html';
+    });
+  </script>
+</body>
+</html>

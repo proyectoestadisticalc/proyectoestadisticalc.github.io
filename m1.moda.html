@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Calculadora de Moda</title>
+  <style>
+    :root {
+      --rojo: #c40000;
+      --gris: #ccc;
+    }
+
+    body, html {
+      height: 100%;
+      margin: 0;
+      background-color: #111;
+      color: white;
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+    }
+
+    main {
+      max-width: 700px;
+      width: 100%;
+      background-color: #222;
+      padding: 2.5rem;
+      border-radius: 10px;
+      box-shadow: 0 0 15px var(--rojo);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    header {
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 2rem;
+      color: var(--rojo);
+      text-shadow: 1px 1px 0 #000;
+    }
+
+    .descripcion {
+      font-size: 1rem;
+      color: var(--gris);
+      margin-top: 0.5rem;
+      font-style: italic;
+      line-height: 1.5;
+      text-align: center;
+      max-width: 600px;
+    }
+
+    form {
+      display: flex;
+      gap: 1rem;
+      width: 100%;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    input[type="text"] {
+      padding: 0.8rem 1rem;
+      font-size: 1rem;
+      flex: 1 1 300px;
+      border-radius: 5px;
+      border: none;
+      background-color: #333;
+      color: white;
+    }
+
+    button {
+      padding: 0.8rem 1.5rem;
+      background-color: var(--rojo);
+      color: white;
+      font-size: 1rem;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #ff1a1a;
+    }
+
+    #resultado {
+      font-size: 1.3rem;
+      min-height: 1.5em;
+      text-align: center;
+      margin-top: 1rem;
+      width: 100%;
+    }
+
+    #definicion {
+      font-size: 1rem;
+      color: var(--gris);
+      background-color: #111;
+      padding: 1rem;
+      border-radius: 6px;
+      width: 100%;
+      text-align: center;
+      font-style: italic;
+    }
+
+    .botones {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 0.5rem;
+    }
+
+    @media (max-width: 500px) {
+      input[type="text"], button {
+        flex: 1 1 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Calculadora de Moda</h1>
+      <p class="descripcion">
+        Ingresa un conjunto de números separados por comas para obtener la moda del conjunto de datos.
+        La moda es el valor o los valores que más se repiten.
+      </p>
+    </header>
+
+    <form id="modaForm">
+      <input 
+        type="text" 
+        id="numeros" 
+        placeholder="Ejemplo: 2, 3, 3, 5, 5, 5" 
+        required 
+        autocomplete="off"
+      />
+      <button type="submit">Calcular Moda</button>
+    </form>
+
+    <div class="botones">
+      <button id="btnLimpiar" type="button">Limpiar</button>
+      <button id="btnRegresar" type="button">Regresar</button>
+    </div>
+
+    <div id="resultado"></div>
+
+    <div id="definicion">
+      <strong>Moda:</strong> Es el número o los números que más se repiten en un conjunto de datos. Puede haber una, varias o ninguna moda.
+    </div>
+  </main>
+
+  <script>
+    const form = document.getElementById('modaForm');
+    const resultado = document.getElementById('resultado');
+    const btnRegresar = document.getElementById('btnRegresar');
+    const btnLimpiar = document.getElementById('btnLimpiar');
+    const inputNumeros = document.getElementById('numeros');
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const input = inputNumeros.value;
+      const valores = input.split(',').map(v => v.trim()).filter(v => v !== '');
+      const numeros = valores.map(Number);
+
+      if (numeros.some(isNaN)) {
+        resultado.textContent = 'Por favor, ingresa solo números separados por comas.';
+        return;
+      }
+
+      const conteo = {};
+      numeros.forEach(num => {
+        conteo[num] = (conteo[num] || 0) + 1;
+      });
+
+      const maxFrecuencia = Math.max(...Object.values(conteo));
+      const modas = Object.keys(conteo)
+        .filter(num => conteo[num] === maxFrecuencia)
+        .map(Number);
+
+      if (modas.length === numeros.length) {
+        resultado.textContent = 'No hay moda, todos los números se repiten igual.';
+      } else if (modas.length === 1) {
+        resultado.textContent = `La moda es: ${modas[0]}`;
+      } else {
+        resultado.textContent = `Las modas son: ${modas.join(', ')}`;
+      }
+    });
+
+    btnRegresar.addEventListener('click', () => {
+      window.location.href = 'modulo1.html'; 
+    });
+
+    btnLimpiar.addEventListener('click', () => {
+      inputNumeros.value = '';
+      resultado.textContent = '';
+      inputNumeros.focus();
+    });
+  </script>
+</body>
+</html>

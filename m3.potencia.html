@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Calculadora de Potencia (σ conocida o desconocida)</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jstat/1.9.4/jstat.min.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #000000;
+      margin: 0;
+      padding: 20px;
+      color: white;
+    }
+    h1 {
+      text-align: center;
+      color: #1E90FF;
+      margin-bottom: 5px;
+    }
+    .container {
+      max-width: 700px;
+      background: #111;
+      margin: 20px auto;
+      padding: 25px 30px;
+      box-shadow: 0 2px 15px rgba(30,144,255,0.3);
+      border-radius: 8px;
+      color: white;
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: 600;
+      color: white;
+    }
+    input[type=number], select {
+      width: 100%;
+      margin-top: 6px;
+      padding: 10px 12px;
+      font-size: 1rem;
+      border: 2px solid #1E90FF;
+      border-radius: 8px;
+      background: #222;
+      color: white;
+      box-sizing: border-box;
+    }
+    input[type=number]:focus, select:focus {
+      border-color: #66ccff;
+      outline: none;
+      background: #333;
+      color: white;
+    }
+    .help-text {
+      font-size: 0.85rem;
+      color: #66ccff;
+      margin-top: 3px;
+    }
+    .result {
+      margin-top: 30px;
+      padding: 20px;
+      background: #111;
+      border-radius: 8px;
+      border: 1.5px solid #1E90FF;
+      color: white;
+      font-size: 1.1rem;
+      font-family: 'Courier New', Courier, monospace;
+    }
+    button {
+      margin-top: 20px;
+      width: 100%;
+      padding: 14px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: #fff;
+      background-color: #1E90FF;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #007ACC;
+    }
+    .graph-container {
+      margin-top: 30px;
+      height: 350px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Calculadora de Potencia para Prueba de Hipótesis</h1>
+     <p style="text-align:center; color:#1E90FF;">
+      Calcula la potencia para la prueba de hipótesis. 
+    </p>
+    <div id="alpha-container">
+      <label for="alpha">Nivel de significancia (α):</label>
+      <input type="number" id="alpha" step="0.001" value="0.05" min="0" max="1" />
+    </div>
+
+    <label for="mu0">Media bajo H₀ (μ₀):</label>
+    <input type="number" id="mu0" step="any" />
+
+    <label for="mu1">Media bajo H₁ (μ₁):</label>
+    <input type="number" id="mu1" step="any" />
+
+    <label for="sd-type">Tipo de desviación estándar:</label>
+    <select id="sd-type">
+      <option value="sigma">σ conocida (desviación estándar poblacional)</option>
+      <option value="s">s desconocida (desviación estándar muestral)</option>
+    </select>
+
+    <div id="sigma-container">
+      <label for="sigma">Desviación estándar poblacional (σ):</label>
+      <input type="number" id="sigma" step="any" min="0" />
+    </div>
+
+    <div id="s-container" style="display:none;">
+      <label for="s">Desviación estándar muestral (s):</label>
+      <input type="number" id="s" step="any" min="0" />
+    </div>
+
+    <label for="n">Tamaño de muestra (n):</label>
+    <input type="number" id="n" step="1" min="2" />
+
+    <label for="tipo">Tipo de prueba:</label>
+    <select id="tipo">
+      <option value="left">Una cola izquierda (H₁: μ &lt; μ₀)</option>
+      <option value="right">Una cola derecha (H₁: μ &gt; μ₀)</option>
+      <option value="two">Dos colas (H₁: μ ≠ μ₀)</option>
+    </select>
+
+    <button id="btnCalcular">Calcular Potencia</button>
+    <button id="btnLimpiar">Limpiar</button>
+    <button onclick="window.location.href='modulo3.html'">Regresar</button>
+
+    <div id="resultado" class="result"></div>
+    <div class="graph-container">
+      <canvas id="canvasGrafica"></canvas>
+    </div>
+  </div>
+
+  <script>
+    const alphaContainer = document.getElementById('alpha-container');
+    const alpha = document.getElementById('alpha');
+    const mu0 = document.getElementById('mu0');
+    const mu1 = document.getElementById('mu1');
+    const sdType = document.getElementById('sd-type');
+    const sigmaContainer = document.getElementById('sigma-container');
+    const sContainer = document.getElementById('s-container');
+    const sigmaInput = document.getElementById('sigma');
+    const sInput = document.getElementById('s');
+    const n = document.getElementById('n');
+    const tipo = document.getElementById('tipo');
+    const resultado = document.getElementById('resultado');
+    const ctx = document.getElementById('canvasGrafica').getContext('2d');
+    let grafica;
+
+    sdType.addEventListener('change', () => {
+      if (sdType.value === 'sigma') {
+        sigmaContainer.style.display = 'block';
+        sContainer.style.display = 'none';
+        alphaContainer.style.display = 'block'; // Mostrar nivel de confianza
+      } else {
+        sigmaContainer.style.display = 'none';
+        sContainer.style.display = 'block';
+        alphaContainer.style.display = 'none'; // Ocultar nivel de confianza
+      }
+    });
+
+    function zCritical(alpha, twoTailed) {
+      return twoTailed
+        ? jStat.normal.inv(1 - alpha / 2, 0, 1)
+        : jStat.normal.inv(1 - alpha, 0, 1);
+    }
+
+    function tCritical(alpha, df, twoTailed) {
+      return twoTailed
+        ? jStat.studentt.inv(1 - alpha / 2, df)
+        : jStat.studentt.inv(1 - alpha, df);
+    }
+
+    document.getElementById('btnCalcular').onclick = () => {
+      const a = parseFloat(alpha.value);
+      const m0 = parseFloat(mu0.value);
+      const m1 = parseFloat(mu1.value);
+      const useSigma = sdType.value === 'sigma';
+      const desv = useSigma ? parseFloat(sigmaInput.value) : parseFloat(sInput.value);
+      const sample = parseInt(n.value);
+      const side = tipo.value;
+
+      // Si el nivel de confianza está oculto (cuando s), establecemos un valor fijo (por ejemplo 0.05)
+      const alphaVal = useSigma ? a : 0.05;
+
+      if ([m0, m1, desv, sample].some(v => isNaN(v)) || desv <= 0 || sample < 2 || (useSigma && (isNaN(a) || a <= 0 || a >= 1))) {
+        alert('Completa todos los campos correctamente.');
+        return;
+      }
+
+      const se = desv / Math.sqrt(sample);
+      const df = sample - 1;
+      const twoTailed = (side === 'two');
+
+      let critVal;
+      if (useSigma) {
+        critVal = zCritical(alphaVal, twoTailed);
+      } else {
+        critVal = tCritical(alphaVal, df, twoTailed);
+      }
+
+      let critIzq, critDer;
+      if (side === 'left') {
+        critIzq = m0 - critVal * se;
+      } else if (side === 'right') {
+        critDer = m0 + critVal * se;
+      } else {
+        critIzq = m0 - critVal * se;
+        critDer = m0 + critVal * se;
+      }
+
+      let beta;
+      if (useSigma) {
+        if (side === 'left') {
+          beta = 1 - jStat.normal.cdf((critIzq - m1) / se, 0, 1);
+        } else if (side === 'right') {
+          beta = jStat.normal.cdf((critDer - m1) / se, 0, 1);
+        } else {
+          beta = jStat.normal.cdf((critDer - m1) / se, 0, 1) - jStat.normal.cdf((critIzq - m1) / se, 0, 1);
+        }
+      } else {
+        if (side === 'left') {
+          beta = 1 - jStat.studentt.cdf((critIzq - m1) / se, df);
+        } else if (side === 'right') {
+          beta = jStat.studentt.cdf((critDer - m1) / se, df);
+        } else {
+          beta = jStat.studentt.cdf((critDer - m1) / se, df) - jStat.studentt.cdf((critIzq - m1) / se, df);
+        }
+      }
+      const potencia = 1 - beta;
+      const stat = (m1 - m0) / se;
+
+      resultado.innerHTML = `
+        <strong>Resultados:</strong><br>
+        - Tipo de desviación estándar: <strong>${useSigma ? 'σ poblacional (normal)' : 's muestral (t de Student)'}</strong><br>
+        - Grados de libertad: <strong>${useSigma ? '∞' : df}</strong><br>
+        - Error estándar (SE): <strong>${se.toFixed(4)}</strong><br>
+        - Valor crítico (${useSigma ? 'z' : 't'}α): <strong>${critVal.toFixed(4)}</strong><br>
+        - Estadístico ${useSigma ? 'z' : 't'}: <strong>${stat.toFixed(4)}</strong><br>
+        - Potencia: <strong>${(potencia * 100).toFixed(2)}%</strong><br>
+        - Tamaño de muestra: <strong>${sample}</strong>
+      `;
+
+      // Graficar
+      const minX = Math.min(m0 - 4 * desv, m1 - 4 * desv);
+      const maxX = Math.max(m0 + 4 * desv, m1 + 4 * desv);
+      const step = (maxX - minX) / 300;
+      const xVals = [];
+      const yH0 = [];
+      const yH1 = [];
+      for (let x = minX; x <= maxX; x += step) {
+        xVals.push(x);
+        yH0.push(useSigma ? jStat.normal.pdf(x, m0, desv) : jStat.studentt.pdf((x - m0)/se, df)/se);
+        yH1.push(useSigma ? jStat.normal.pdf(x, m1, desv) : jStat.studentt.pdf((x - m1)/se, df)/se);
+      }
+
+      if(grafica) grafica.destroy();
+
+      grafica = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: xVals,
+          datasets: [
+            {
+              label: 'Distribución bajo H₀',
+              data: yH0,
+              borderColor: '#1E90FF',
+              borderWidth: 2,
+              fill: false,
+              pointRadius: 0,
+              tension: 0.2
+            },
+            {
+              label: 'Distribución bajo H₁',
+              data: yH1,
+              borderColor: '#00FF00',
+              borderWidth: 2,
+              fill: false,
+              pointRadius: 0,
+              tension: 0.2
+            }
+          ]
+        },
+        options: {
+          animation: false,
+          responsive: true,
+          scales: {
+            x: {
+              type: 'linear',
+              title: {
+                display: true,
+                text: 'Valor de la media muestral'
+              },
+              ticks: {
+                color: '#66ccff'
+              },
+              grid: {
+                color: '#333'
+              }
+            },
+            y: {
+              title: {
+                display: true,
+                text: 'Densidad de probabilidad'
+              },
+              ticks: {
+                color: '#66ccff'
+              },
+              grid: {
+                color: '#333'
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              labels: {
+                color: 'white'
+              }
+            }
+          }
+        }
+      });
+    };
+
+    document.getElementById('btnLimpiar').onclick = () => {
+      alpha.value = '0.05';
+      mu0.value = '';
+      mu1.value = '';
+      sigmaInput.value = '';
+      sInput.value = '';
+      n.value = '';
+      tipo.value = 'two';
+      sdType.value = 'sigma';
+      sigmaContainer.style.display = 'block';
+      sContainer.style.display = 'none';
+      alphaContainer.style.display = 'block';
+      resultado.innerHTML = '';
+      if(grafica) grafica.destroy();
+    };
+  </script>
+</body>
+</html>

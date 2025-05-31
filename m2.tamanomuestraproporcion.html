@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tamaño de Muestra Proporción</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #000;
+      margin: 0;
+      padding: 20px;
+      color: white;
+    }
+    h1 {
+      text-align: center;
+      color: #00cc44;
+      margin-bottom: 5px;
+    }
+    .container {
+      max-width: 700px;
+      background: #111;
+      margin: 20px auto;
+      padding: 25px 30px;
+      box-shadow: 0 2px 10px rgba(0,255,0,0.2);
+      border-radius: 8px;
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: 600;
+      color: white;
+    }
+    select, input[type=number] {
+      width: 100%;
+      margin-top: 6px;
+      padding: 8px 10px;
+      font-size: 1rem;
+      border: 1.8px solid #00cc44;
+      border-radius: 6px;
+      background: #222;
+      color: white;
+      transition: border-color 0.25s ease;
+    }
+    input:focus {
+      border-color: #00cc44;
+      outline: none;
+      background: #333;
+    }
+    .help-text {
+      font-size: 0.85rem;
+      color: #66cc66;
+      margin-top: 3px;
+    }
+    .error {
+      color: #cc4444;
+      font-weight: 700;
+      margin-top: 10px;
+    }
+    .result {
+      margin-top: 30px;
+      padding: 20px;
+      background: #111;
+      border-radius: 8px;
+      border: 1px solid #00cc44;
+    }
+    .formula {
+      font-family: 'Courier New', Courier, monospace;
+      background: #002200;
+      padding: 10px;
+      border-radius: 5px;
+      margin-top: 10px;
+      user-select: all;
+      color: #00cc44;
+    }
+    .buttons-row {
+      display: flex;
+      gap: 15px;
+      margin-top: 15px;
+    }
+    button {
+      flex: 1;
+      padding: 12px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #fff;
+      background-color: #00cc44;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #009933;
+    }
+    #graficoCanvas {
+      margin-top: 25px;
+      max-width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Tamaño de Muestra para Proporción</h1>
+    <p style="text-align:center; color:#88cc88;">Calcula el tamaño de la muestra para la proporción</p>
+    <form id="calcForm">
+      <label for="confianza">Nivel de confianza (%)</label>
+      <input type="number" id="confianza" min="50" max="99.99" step="0.01" placeholder="Ej. 95" />
+
+      <label for="proporcion">Proporción estimada (p)</label>
+      <input type="number" id="proporcion" step="0.01" min="0.01" max="0.99" placeholder="Ej. 0.5" />
+
+      <label for="margenError">Margen de error deseado (E)</label>
+      <input type="number" id="margenError" step="0.001" min="0.001" max="1" placeholder="Ej. 0.05" />
+
+      <label for="poblacion">Tamaño de población (opcional)</label>
+      <input type="number" id="poblacion" min="1" placeholder="Dejar vacío si es infinita" />
+
+      <div id="errorMsg" class="error"></div>
+
+      <div class="buttons-row">
+        <button type="submit" id="calcularBtn">Calcular</button>
+      </div>
+      <div class="buttons-row">
+        <button type="button" id="limpiarBtn">Limpiar</button>
+        <button type="button" id="regresarBtn">Regresar</button>
+      </div>
+    </form>
+
+    <div id="resultado" class="result" style="display: none">
+      <h2>Resultado</h2>
+      <p>Tamaño mínimo de muestra necesario: <strong id="nValue"></strong></p>
+      <p id="descripcionResultado"></p>
+      <div class="formula" id="formulaText"></div>
+      <canvas id="graficoCanvas"></canvas>
+    </div>
+  </div>
+
+  <script>
+    function normSInv(p) {
+      const a = [2.50662823884, -18.61500062529, 41.39119773534, -25.44106049637];
+      const b = [-8.4735109309, 23.08336743743, -21.06224101826, 3.13082909833];
+      const c = [0.3374754822726147, 0.9761690190917186, 0.1607979714918209,
+                 0.0276438810333863, 0.0038405729373609, 0.0003951896511919,
+                 0.0000321767881768, 0.0000002888167364, 0.0000003960315187];
+      if (p < 0 || p > 1) return NaN;
+      if (p === 0) return -Infinity;
+      if (p === 1) return Infinity;
+      let y = p - 0.5;
+      if (Math.abs(y) < 0.42) {
+        let r = y * y;
+        let num = y * (((a[3]*r + a[2])*r + a[1])*r + a[0]);
+        let den = (((b[3]*r + b[2])*r + b[1])*r + b[0]) * r + 1;
+        return num / den;
+      } else {
+        let r = p;
+        if (y > 0) r = 1 - p;
+        r = Math.log(-Math.log(r));
+        let val = c.reduce((acc, curr, i) => acc + curr * Math.pow(r, i), 0);
+        return y < 0 ? -val : val;
+      }
+    }
+
+    let chart;
+
+    document.getElementById('calcForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      document.getElementById('errorMsg').textContent = '';
+      document.getElementById('resultado').style.display = 'none';
+
+      const z = normSInv;
+      const confianza = parseFloat(document.getElementById('confianza').value);
+      const p = parseFloat(document.getElementById('proporcion').value);
+      const eValor = parseFloat(document.getElementById('margenError').value);
+      const poblacion = document.getElementById('poblacion').value ? parseInt(document.getElementById('poblacion').value) : null;
+
+      if (isNaN(confianza) || confianza < 50 || confianza > 99.99) {
+        document.getElementById('errorMsg').textContent = 'Confianza debe estar entre 50 y 99.99'; return;
+      }
+      if (isNaN(p) || p <= 0 || p >= 1) {
+        document.getElementById('errorMsg').textContent = 'Proporción debe estar entre 0 y 1 (excluyendo extremos)'; return;
+      }
+      if (isNaN(eValor) || eValor <= 0 || eValor >= 1) {
+        document.getElementById('errorMsg').textContent = 'Margen de error debe estar entre 0 y 1'; return;
+      }
+      if (poblacion !== null && (poblacion < 1 || !Number.isInteger(poblacion))) {
+        document.getElementById('errorMsg').textContent = 'Población debe ser un entero ≥ 1 o dejarse vacío'; return;
+      }
+
+      const alpha = 1 - (confianza / 100);
+      const zScore = z(1 - alpha / 2);
+      let n = Math.pow(zScore, 2) * p * (1 - p) / Math.pow(eValor, 2);
+
+      let nSinRedondear = n;
+
+      if (poblacion !== null) {
+        n = (poblacion * n) / (poblacion + n - 1);
+      }
+
+      n = Math.ceil(n);
+
+      document.getElementById('nValue').textContent = n;
+      let descripcion = `Nivel de confianza = ${confianza}%, p = ${p}, margen de error = ${eValor}`;
+      if (poblacion) descripcion += `. Corrección por población finita: N = ${poblacion}`;
+      document.getElementById('descripcionResultado').textContent = descripcion;
+
+      const formula = `n = (Z^2 * p * (1 - p)) / E^2\n\nZ = ${zScore.toFixed(4)}\np = ${p}\nE = ${eValor}\n\nn = (${zScore.toFixed(4)}^2 * ${p} * ${1 - p}) / (${eValor}^2) = ${nSinRedondear.toFixed(2)}\n` +
+        (poblacion ? `\nCorrección: n = (N * n) / (N + n - 1) = ${n}` : '');
+
+      document.getElementById('formulaText').textContent = formula;
+      document.getElementById('resultado').style.display = 'block';
+
+      const ctx = document.getElementById('graficoCanvas').getContext('2d');
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['n calculado'],
+          datasets: [{
+            label: 'Tamaño de muestra',
+            data: [n],
+            backgroundColor: '#00cc44'
+          }]
+        },
+        options: {
+          scales: {
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
+    });
+
+    document.getElementById('limpiarBtn').addEventListener('click', () => {
+      document.getElementById('calcForm').reset();
+      document.getElementById('resultado').style.display = 'none';
+      document.getElementById('errorMsg').textContent = '';
+      if (chart) chart.destroy();
+    });
+
+    document.getElementById('regresarBtn').addEventListener('click', () => {
+      window.location.href = 'modulo2.html'
+    });
+
+    window.addEventListener('load', () => {
+      document.getElementById('calcForm').reset();
+    });
+  </script>
+</body>
+</html>

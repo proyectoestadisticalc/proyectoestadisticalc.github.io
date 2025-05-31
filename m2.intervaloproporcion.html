@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Calculadora de Intervalo de Confianza para la Proporción</title>
+<style>
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #000000;
+    margin: 0; 
+    padding: 20px;
+    color: white;
+  }
+  h1 {
+    text-align: center;
+    color: #00cc44;
+    margin-bottom: 5px;
+  }
+  .container {
+    max-width: 700px;
+    background: #111;
+    margin: 20px auto;
+    padding: 25px 30px;
+    box-shadow: 0 2px 10px rgba(0,255,0,0.2);
+    border-radius: 8px;
+    color: white;
+  }
+  label {
+    display: block;
+    margin-top: 15px;
+    font-weight: 600;
+    color: white;
+  }
+  input[type=number], textarea {
+    width: 100%;
+    margin-top: 6px;
+    padding: 8px 10px;
+    font-size: 1rem;
+    border: 1.8px solid #00cc44;
+    border-radius: 6px;
+    background: #222;
+    color: white;
+    transition: border-color 0.25s ease;
+  }
+  input[type=number]:focus, textarea:focus {
+    border-color: #00cc44;
+    outline: none;
+    background: #333;
+    color: white;
+  }
+  .help-text {
+    font-size: 0.85rem;
+    color: #66cc66;
+    margin-top: 3px;
+  }
+  .error {
+    color: #cc4444;
+    font-weight: 700;
+    margin-top: 10px;
+  }
+  .result {
+    margin-top: 30px;
+    padding: 20px;
+    background: #111;
+    border-radius: 8px;
+    border: 1px solid #00cc44;
+    color: white;
+  }
+  .formula {
+    font-family: 'Courier New', Courier, monospace;
+    background: #002200;
+    padding: 10px;
+    border-radius: 5px;
+    margin-top: 10px;
+    user-select: all;
+    color: #00cc44;
+  }
+  .copy-btn {
+    margin-left: 10px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    color: #00cc44;
+    text-decoration: underline;
+    background: none;
+    border: none;
+  }
+  .graph-container {
+    margin-top: 25px;
+    text-align: center;
+  }
+  svg {
+    max-width: 100%;
+    height: 80px;
+  }
+  button#calcularBtn {
+    margin-top: 25px;
+    width: 100%;
+    padding: 12px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+    background-color: #00cc44;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  button#calcularBtn:hover {
+    background-color: #009933;
+    color: #fff;
+  }
+  .buttons-row {
+    display: flex;
+    gap: 15px;
+    margin-top: 10px;
+  }
+  button#limpiarBtn,
+  button#regresarBtn {
+    flex: 1;
+    padding: 12px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+    background-color: #00cc44;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  button#limpiarBtn:hover,
+  button#regresarBtn:hover {
+    background-color: #009933;
+    color: #fff;
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <h1>Intervalo de Confianza para la Proporción</h1>
+    <p style="text-align:center; color:#88cc88;">Calcula el intervalo de confianza para la proporción</p>
+
+    <label for="nInput">Tamaño de muestra (n):</label>
+    <input type="number" id="nInput" min="1" placeholder="Ej: 100" />
+
+    <label for="xInput">Número de éxitos (x):</label>
+    <input type="number" id="xInput" min="0" placeholder="Ej: 42" />
+
+    <label for="confLevel">Nivel de confianza (%):</label>
+    <input type="number" id="confLevel" min="50" max="99.9" step="0.1" value="95" />
+
+    <button id="calcularBtn">Calcular Intervalo</button>
+
+    <div class="buttons-row">
+      <button id="limpiarBtn">Limpiar</button>
+      <button id="regresarBtn">Regresar</button>
+    </div>
+
+    <div class="result" id="result" style="display:none;"></div>
+  </div>
+
+<script>
+  // Función para obtener z crítico para nivel de confianza
+  function zCritico(confianza) {
+    // confianza es entre 0 y 1, ejemplo 0.95
+    let p = 1 - (1 - confianza) / 2;
+    if (p < 0.5) {
+      return -rationalApproximation(Math.sqrt(-2.0 * Math.log(p)));
+    } else {
+      return rationalApproximation(Math.sqrt(-2.0 * Math.log(1 - p)));
+    }
+    function rationalApproximation(t) {
+      const c0 = 2.515517;
+      const c1 = 0.802853;
+      const c2 = 0.010328;
+      const d1 = 1.432788;
+      const d2 = 0.189269;
+      const d3 = 0.001308;
+      return t - ((c0 + c1 * t + c2 * t * t) / (1 + d1 * t + d2 * t * t + d3 * t * t * t));
+    }
+  }
+
+  // Función para crear SVG simple para el intervalo y p̂
+  function crearSVG(pHat, li, ls) {
+    const w = 650, h = 80;
+    const margen = 60;
+    const rango = Math.max(ls - li, 0.1) * 1.4;
+    const escala = (w - 2 * margen) / rango;
+    const pos = x => margen + (x - (pHat - rango / 2)) * escala;
+
+    // Asegurar que li y ls estén dentro de 0 y 1
+    li = Math.max(0, li);
+    ls = Math.min(1, ls);
+
+    return `
+      <svg width="${w}" height="${h}" aria-label="Gráfico intervalo de confianza para proporción" role="img">
+        <!-- Línea base -->
+        <line x1="${margen}" y1="${h / 2}" x2="${w - margen}" y2="${h / 2}" stroke="#333" stroke-width="2" />
+        <!-- Intervalo -->
+        <line x1="${pos(li)}" y1="${h / 2}" x2="${pos(ls)}" y2="${h / 2}" stroke="#00cc44" stroke-width="6" />
+        <!-- Líneas verticales intervalo -->
+        <line x1="${pos(li)}" y1="${h / 2 - 15}" x2="${pos(li)}" y2="${h / 2 + 15}" stroke="#00cc44" stroke-width="2" />
+        <line x1="${pos(ls)}" y1="${h / 2 - 15}" x2="${pos(ls)}" y2="${h / 2 + 15}" stroke="#00cc44" stroke-width="2" />
+        <!-- Punto pHat -->
+        <circle cx="${pos(pHat)}" cy="${h / 2}" r="8" fill="#009922" />
+        <!-- Texto -->
+        <text x="${pos(li) - 10}" y="${h / 2 - 20}" fill="#00cc44" font-size="14" font-family="Segoe UI, Tahoma, Geneva, Verdana, sans-serif">${li.toFixed(4)}</text>
+        <text x="${pos(ls) - 10}" y="${h / 2 - 20}" fill="#00cc44" font-size="14" font-family="Segoe UI, Tahoma, Geneva, Verdana, sans-serif">${ls.toFixed(4)}</text>
+        <text x="${pos(pHat) - 20}" y="${h / 2 + 30}" fill="#ccffcc" font-size="14" font-family="Segoe UI, Tahoma, Geneva, Verdana, sans-serif">p̂</text>
+      </svg>
+    `;
+  }
+
+  document.getElementById('calcularBtn').addEventListener('click', () => {
+    const n = parseInt(document.getElementById('nInput').value);
+    const x = parseInt(document.getElementById('xInput').value);
+    const confLevel = parseFloat(document.getElementById('confLevel').value) / 100;
+
+    if (isNaN(n) || isNaN(x) || isNaN(confLevel)) {
+      alert('Por favor, completa todos los campos correctamente.');
+      return;
+    }
+    if (n <= 0) {
+      alert('El tamaño de la muestra (n) debe ser mayor que cero.');
+      return;
+    }
+    if (x < 0 || x > n) {
+      alert('El número de éxitos (x) debe estar entre 0 y n.');
+      return;
+    }
+    if (confLevel < 0.5 || confLevel >= 1) {
+      alert('El nivel de confianza debe estar entre 50 y 99.9%.');
+      return;
+    }
+
+    const pHat = x / n;
+    const z = Math.abs(zCritico(confLevel));
+    const margenError = z * Math.sqrt((pHat * (1 - pHat)) / n);
+
+    let li = pHat - margenError;
+    let ls = pHat + margenError;
+
+    // Limitar dentro de 0 y 1
+    li = Math.max(0, li);
+    ls = Math.min(1, ls);
+
+    const resultDiv = document.getElementById('result');
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = `
+      <h3>Resultados</h3>
+      <p><strong>Tamaño de muestra (n):</strong> ${n}</p>
+      <p><strong>Número de éxitos (x):</strong> ${x}</p>
+      <p><strong>Proporción muestral (p̂):</strong> ${pHat.toFixed(4)}</p>
+      <p><strong>Nivel de confianza:</strong> ${(confLevel * 100).toFixed(2)}%</p>
+      <p><strong>Valor crítico Z:</strong> ${z.toFixed(4)}</p>
+      <p><strong>Intervalo de confianza:</strong> [${li.toFixed(4)}, ${ls.toFixed(4)}]</p>
+      <div class="formula">
+        IC = p̂ ± Z × √(p̂(1 - p̂) / n) <br/>
+        IC = ${pHat.toFixed(4)} ± ${z.toFixed(4)} × √(${pHat.toFixed(4)}(1 - ${pHat.toFixed(4)}) / ${n}) <br/>
+        IC = [${li.toFixed(4)}, ${ls.toFixed(4)}]
+      </div>
+      <div class="graph-container">${crearSVG(pHat, li, ls)}</div>
+    `;
+  });
+
+  document.getElementById('limpiarBtn').addEventListener('click', () => {
+    document.getElementById('nInput').value = '';
+    document.getElementById('xInput').value = '';
+    document.getElementById('confLevel').value = 95;
+    const resultDiv = document.getElementById('result');
+    resultDiv.style.display = 'none';
+    resultDiv.innerHTML = '';
+  });
+
+  document.getElementById('regresarBtn').addEventListener('click', () => {
+     window.location.href = 'modulo2.html';
+  });
+</script>
+</body>
+</html>

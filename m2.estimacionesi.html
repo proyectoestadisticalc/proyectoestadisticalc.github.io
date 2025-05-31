@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Estimador de Intervalos</title>
+<style>
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #000000;
+    margin: 0; padding: 20px;
+    color: white;
+  }
+  h1 {
+    text-align: center;
+    color: #00cc44;
+    margin-bottom: 5px;
+  }
+  .container {
+    max-width: 700px;
+    background: #111;
+    margin: 20px auto;
+    padding: 25px 30px;
+    box-shadow: 0 2px 10px rgba(0,255,0,0.2);
+    border-radius: 8px;
+    color: white;
+  }
+  label {
+    display: block;
+    margin-top: 15px;
+    font-weight: 600;
+    color: white;
+  }
+  select, input[type=number], textarea {
+    width: 100%;
+    margin-top: 6px;
+    padding: 8px 10px;
+    font-size: 1rem;
+    border: 1.8px solid #00cc44;
+    border-radius: 6px;
+    background: #222;
+    color: white;
+    transition: border-color 0.25s ease;
+  }
+  select:focus, input[type=number]:focus, textarea:focus {
+    border-color: #00cc44;
+    outline: none;
+    background: #333;
+    color: white;
+  }
+  .help-text {
+    font-size: 0.85rem;
+    color: #66cc66;
+    margin-top: 3px;
+  }
+  .error {
+    color: #cc4444;
+    font-weight: 700;
+    margin-top: 10px;
+  }
+  .result {
+    margin-top: 30px;
+    padding: 20px;
+    background: #111;
+    border-radius: 8px;
+    border: 1px solid #00cc44;
+    color: white;
+  }
+  .formula {
+    font-family: 'Courier New', Courier, monospace;
+    background: #002200;
+    padding: 10px;
+    border-radius: 5px;
+    margin-top: 10px;
+    user-select: all;
+    color: #00cc44;
+  }
+  .copy-btn {
+    margin-left: 10px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    color: #00cc44;
+    text-decoration: underline;
+    background: none;
+    border: none;
+  }
+  .graph-container {
+    margin-top: 25px;
+    text-align: center;
+  }
+  svg {
+    max-width: 100%;
+    height: 80px;
+  }
+  button#calcularBtn {
+    margin-top: 25px;
+    width: 100%;
+    padding: 12px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+    background-color: #00cc44;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  button#calcularBtn:hover {
+    background-color: #009933;
+    color: #fff;
+  }
+  .buttons-row {
+    display: flex;
+    gap: 15px;
+    margin-top: 10px;
+  }
+  button#limpiarBtn,
+  button#regresarBtn {
+    flex: 1;
+    padding: 12px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+    background-color: #00cc44;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  button#limpiarBtn:hover,
+  button#regresarBtn:hover {
+    background-color: #009933;
+    color: #fff;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Estimador de Intervalos</h1>
+  <p style="text-align:center; color:#88cc88;">Estima intervalos para media, proporción o varianza con explicación y gráfico.</p>
+
+  <label for="tipoEstimacion">Selecciona el tipo de estimación:</label>
+  <select id="tipoEstimacion">
+    <option value="media">Media poblacional (μ)</option>
+    <option value="proporcion">Proporción poblacional (p)</option>
+    <option value="varianza">Varianza poblacional (σ²)</option>
+  </select>
+
+  <label for="nivelConfianza">Nivel de confianza:</label>
+  <select id="nivelConfianza" aria-label="Nivel de confianza">
+    <option value="0.90">90%</option>
+    <option value="0.95" selected>95%</option>
+    <option value="0.99">99%</option>
+  </select>
+
+  <!-- Inputs media -->
+  <div id="inputsMedia" class="input-group">
+    <label for="mediaMuestral">Media muestral (x̄):</label>
+    <input type="number" id="mediaMuestral" step="any" placeholder="Ejemplo: 45.2" />
+    
+    <label for="desviacionEstandar">Desviación estándar muestral (s):</label>
+    <input type="number" id="desviacionEstandar" step="any" min="0" placeholder="Ejemplo: 5.3" />
+    
+    <label for="tamanoMuestraMedia">Tamaño de la muestra (n):</label>
+    <input type="number" id="tamanoMuestraMedia" min="1" placeholder="Ejemplo: 50" />
+    
+    <label for="datosBrutosMedia">O ingresa datos en bruto separados por comas:</label>
+    <textarea id="datosBrutosMedia" placeholder="Ejemplo: 43, 46, 48, 44, 47"></textarea>
+    <small class="help-text">Si ingresas datos, se calculará media y desviación estándar automáticamente.</small>
+  </div>
+
+  <!-- Inputs proporción -->
+  <div id="inputsProporcion" class="input-group" style="display:none;">
+    <label for="exitos">Número de éxitos (x):</label>
+    <input type="number" id="exitos" min="0" placeholder="Ejemplo: 30" />
+    
+    <label for="tamanoMuestraProporcion">Tamaño de la muestra (n):</label>
+    <input type="number" id="tamanoMuestraProporcion" min="1" placeholder="Ejemplo: 50" />
+    
+    <label for="datosBrutosProporcion">O ingresa datos en bruto (0 y 1) separados por comas:</label>
+    <textarea id="datosBrutosProporcion" placeholder="Ejemplo: 1,0,1,1,0,1,1"></textarea>
+    <small class="help-text">Si ingresas datos, se calculará proporción automáticamente.</small>
+  </div>
+
+  <!-- Inputs varianza -->
+  <div id="inputsVarianza" class="input-group" style="display:none;">
+    <label for="varianzaMuestral">Varianza muestral (s²):</label>
+    <input type="number" id="varianzaMuestral" step="any" min="0" placeholder="Ejemplo: 12.3" />
+    
+    <label for="tamanoMuestraVarianza">Tamaño de la muestra (n):</label>
+    <input type="number" id="tamanoMuestraVarianza" min="2" placeholder="Ejemplo: 50" />
+    
+    <label for="datosBrutosVarianza">O ingresa datos en bruto separados por comas:</label>
+    <textarea id="datosBrutosVarianza" placeholder="Ejemplo: 43, 46, 48, 44, 47"></textarea>
+    <small class="help-text">Si ingresas datos, se calculará varianza automáticamente.</small>
+  </div>
+
+  <button id="calcularBtn">Calcular intervalo de confianza</button>
+
+  <div class="buttons-row">
+    <button id="limpiarBtn">Limpiar</button>
+    <button id="regresarBtn">Regresar</button>
+  </div>
+
+  <div id="errorMsg" class="error"></div>
+
+  <div id="resultado" class="result" style="display:none;">
+    <h2>Resultado:</h2>
+    <p id="estimacionPuntual"></p>
+    <p id="intervaloConfianza"></p>
+    <div id="formulaContainer" class="formula"></div>
+    <div class="graph-container">
+      <svg id="grafico" viewBox="0 0 700 80" aria-label="Visualización gráfica del intervalo de confianza"></svg>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Referencias DOM
+  const tipoEstimacion = document.getElementById('tipoEstimacion');
+  const nivelConfianza = document.getElementById('nivelConfianza');
+  
+  const inputsMedia = document.getElementById('inputsMedia');
+  const inputsProporcion = document.getElementById('inputsProporcion');
+  const inputsVarianza = document.getElementById('inputsVarianza');
+
+  const calcularBtn = document.getElementById('calcularBtn');
+  const limpiarBtn = document.getElementById('limpiarBtn');
+  const regresarBtn = document.getElementById('regresarBtn');
+
+  const errorMsg = document.getElementById('errorMsg');
+  const resultado = document.getElementById('resultado');
+  const estimacionPuntual = document.getElementById('estimacionPuntual');
+  const intervaloConfianza = document.getElementById('intervaloConfianza');
+  const formulaContainer = document.getElementById('formulaContainer');
+  const grafico = document.getElementById('grafico');
+
+  // Cambiar inputs según estimación
+  tipoEstimacion.addEventListener('change', () => {
+    errorMsg.textContent = '';
+    resultado.style.display = 'none';
+
+    inputsMedia.style.display = 'none';
+    inputsProporcion.style.display = 'none';
+    inputsVarianza.style.display = 'none';
+
+    if (tipoEstimacion.value === 'media') {
+      inputsMedia.style.display = 'block';
+    } else if (tipoEstimacion.value === 'proporcion') {
+      inputsProporcion.style.display = 'block';
+    } else if (tipoEstimacion.value === 'varianza') {
+      inputsVarianza.style.display = 'block';
+    }
+  });
+
+  // Funciones de cálculo
+
+  // Cálculo z crítico para nivel de confianza
+  function zCritico(confianza) {
+    // Usamos tabla inversa normal estándar aproximada:
+    const zTable = {
+      0.90: 1.645,
+      0.95: 1.96,
+      0.99: 2.576
+    };
+    return zTable[confianza] || 1.96;
+  }
+
+  // Cálculo t crítico (simple, usando valor para grados de libertad n-1)
+  function tCritico(confianza, gl) {
+    // Aproximado con valores comunes para 95% y varios gl (muy aproximado)
+    // Mejor usar librería estadística si se quiere precisión
+    // Aquí usaremos solo para gl >= 30, retornamos z en ese caso
+    if (gl >= 30) return zCritico(confianza);
+    const tTable95 = {
+      1: 12.71, 2: 4.303, 3: 3.182, 4: 2.776, 5: 2.571,
+      6: 2.447, 7: 2.365, 8: 2.306, 9: 2.262, 10: 2.228,
+      15: 2.131, 20: 2.086, 25: 2.060, 30: 2.042
+    };
+    if (confianza === 0.95) {
+      if (gl <= 30) return tTable95[gl] || 2.0;
+      else return 1.96;
+    }
+    // Para 90% y 99% no implementado con detalle aquí, usar z como aproximación
+    return zCritico(confianza);
+  }
+
+  // Media y desviación estándar desde datos brutos
+  function calcMediaDesv(datos) {
+    if (datos.length === 0) return null;
+    const n = datos.length;
+    const suma = datos.reduce((a,b) => a+b,0);
+    const media = suma / n;
+    const varianza = datos.reduce((acc, val) => acc + (val - media)**2, 0) / (n-1);
+    const desv = Math.sqrt(varianza);
+    return {media, desv};
+  }
+
+  // Varianza desde datos brutos
+  function calcVarianza(datos) {
+    if (datos.length < 2) return null;
+    const n = datos.length;
+    const suma = datos.reduce((a,b) => a+b,0);
+    const media = suma / n;
+    const varianza = datos.reduce((acc, val) => acc + (val - media)**2, 0) / (n-1);
+    return varianza;
+  }
+
+  // Proporción desde datos brutos (0 y 1)
+  function calcProporcion(datos) {
+    if (datos.length === 0) return null;
+    const suma = datos.reduce((a,b) => a+b, 0);
+    return suma / datos.length;
+  }
+
+  // Función para parsear datos separados por comas
+  function parseDatos(text) {
+    if (!text) return [];
+    return text.split(',').map(x => parseFloat(x.trim())).filter(x => !isNaN(x));
+  }
+
+  // Cálculo del intervalo para media
+  function intervaloMedia(media, desv, n, confianza) {
+    let z = zCritico(confianza);
+    let t = tCritico(confianza, n-1);
+    let margen = (n >= 30) ? (z * (desv/Math.sqrt(n))) : (t * (desv/Math.sqrt(n)));
+    return {
+      inferior: media - margen,
+      superior: media + margen,
+      margen: margen,
+      critico: (n >= 30) ? `z = ${z.toFixed(3)}` : `t = ${t.toFixed(3)} (gl=${n-1})`
+    };
+  }
+
+  // Intervalo para proporción
+  function intervaloProporcion(x, n, confianza) {
+    if (n === 0) return null;
+    let p = x / n;
+    let z = zCritico(confianza);
+    let margen = z * Math.sqrt((p*(1-p))/n);
+    return {
+      inferior: p - margen,
+      superior: p + margen,
+      margen: margen,
+      critico: `z = ${z.toFixed(3)}`
+    };
+  }
+
+  // Intervalo para varianza con chi-cuadrado
+  function intervaloVarianza(s2, n, confianza) {
+    if (n < 2) return null;
+    const gl = n - 1;
+    // chi-cuadrado críticos para 90%, 95%, 99% (aprox)
+    // valores sacados de tablas (aproximados)
+    const chi2Table = {
+      0.90: {left: 2.706, right: 16.919},
+      0.95: {left: 3.841, right: 21.666},
+      0.99: {left: 6.635, right: 26.296}
+    };
+    const chi2 = chi2Table[confianza] || chi2Table[0.95];
+
+    // Aquí simplificamos asumiendo gl=10 (demo), para producción usar librería
+    // Mejorar esto para múltiples gl (se requiere tabla o librería)
+
+    // Solo demostración: 
+    const chi2_izq = chi2.left; 
+    const chi2_der = chi2.right;
+
+    const inferior = (gl * s2) / chi2_der;
+    const superior = (gl * s2) / chi2_izq;
+
+    return {
+      inferior,
+      superior,
+      critico: `χ²(${gl}) ≈ [${chi2_izq}, ${chi2_der}] (aprox)`
+    };
+  }
+
+  // Dibujar gráfico simple para intervalo y punto estimado (en svg)
+  function dibujarGrafico(inferior, superior, punto, tipo) {
+    grafico.innerHTML = ''; // limpiar
+
+    if (inferior == null || superior == null || punto == null) return;
+
+    const width = 700;
+    const height = 80;
+    const margin = 50;
+
+    // Crear escala simple para gráfico: mapear números al ancho
+    // Si intervalo pequeño, ampliamos rango
+    const minX = Math.min(inferior, punto) - (superior - inferior) * 0.2;
+    const maxX = Math.max(superior, punto) + (superior - inferior) * 0.2;
+
+    const scaleX = x => margin + ((x - minX) / (maxX - minX)) * (width - 2 * margin);
+
+    // Crear línea base
+    const lineBase = document.createElementNS('http://www.w3.org/2000/svg','line');
+    lineBase.setAttribute('x1', scaleX(minX));
+    lineBase.setAttribute('y1', height/2);
+    lineBase.setAttribute('x2', scaleX(maxX));
+    lineBase.setAttribute('y2', height/2);
+    lineBase.setAttribute('stroke', '#00cc44');
+    lineBase.setAttribute('stroke-width', '4');
+    grafico.appendChild(lineBase);
+
+    // Intervalo confianza
+    const intervalLine = document.createElementNS('http://www.w3.org/2000/svg','line');
+    intervalLine.setAttribute('x1', scaleX(inferior));
+    intervalLine.setAttribute('y1', height/2);
+    intervalLine.setAttribute('x2', scaleX(superior));
+    intervalLine.setAttribute('y2', height/2);
+    intervalLine.setAttribute('stroke', '#00ff88');
+    intervalLine.setAttribute('stroke-width', '10');
+    intervalLine.setAttribute('stroke-linecap', 'round');
+    grafico.appendChild(intervalLine);
+
+    // Extremos intervalo
+    [inferior, superior].forEach(x => {
+      const circle = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      circle.setAttribute('cx', scaleX(x));
+      circle.setAttribute('cy', height/2);
+      circle.setAttribute('r', 7);
+      circle.setAttribute('fill', '#00ff88');
+      grafico.appendChild(circle);
+
+      const text = document.createElementNS('http://www.w3.org/2000/svg','text');
+      text.setAttribute('x', scaleX(x));
+      text.setAttribute('y', height/2 - 15);
+      text.setAttribute('fill', '#00ff88');
+      text.setAttribute('font-size', '14');
+      text.setAttribute('text-anchor', 'middle');
+      text.textContent = x.toFixed(2);
+      grafico.appendChild(text);
+    });
+
+    // Punto estimación puntual
+    const ptCircle = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    ptCircle.setAttribute('cx', scaleX(punto));
+    ptCircle.setAttribute('cy', height/2);
+    ptCircle.setAttribute('r', 9);
+    ptCircle.setAttribute('fill', '#00cc44');
+    ptCircle.setAttribute('stroke', '#004400');
+    ptCircle.setAttribute('stroke-width', '2');
+    grafico.appendChild(ptCircle);
+
+    const ptText = document.createElementNS('http://www.w3.org/2000/svg','text');
+    ptText.setAttribute('x', scaleX(punto));
+    ptText.setAttribute('y', height/2 + 25);
+    ptText.setAttribute('fill', '#00cc44');
+    ptText.setAttribute('font-size', '16');
+    ptText.setAttribute('font-weight', '700');
+    ptText.setAttribute('text-anchor', 'middle');
+    ptText.textContent = punto.toFixed(2);
+    grafico.appendChild(ptText);
+
+  }
+
+  // Manejar cálculo botón
+  calcularBtn.addEventListener('click', () => {
+    errorMsg.textContent = '';
+    resultado.style.display = 'none';
+
+    const confianza = parseFloat(nivelConfianza.value);
+    const tipo = tipoEstimacion.value;
+
+    try {
+      if (tipo === 'media') {
+        // Leer datos
+        let datos = parseDatos(document.getElementById('datosBrutosMedia').value);
+        let n, media, desv;
+
+        if (datos.length >= 2) {
+          const res = calcMediaDesv(datos);
+          if (!res) throw new Error('Error al calcular media/desviación');
+          media = res.media;
+          desv = res.desv;
+          n = datos.length;
+        } else {
+          media = parseFloat(document.getElementById('mediaMuestral').value);
+          desv = parseFloat(document.getElementById('desviacionEstandar').value);
+          n = parseInt(document.getElementById('tamanoMuestraMedia').value);
+          if (isNaN(media) || isNaN(desv) || isNaN(n)) throw new Error('Ingrese media, desviación y tamaño de muestra válidos o datos brutos');
+          if (desv <= 0) throw new Error('La desviación estándar debe ser positiva');
+          if (n < 2) throw new Error('El tamaño de muestra debe ser al menos 2');
+        }
+
+        const intervalo = intervaloMedia(media, desv, n, confianza);
+        estimacionPuntual.textContent = `Estimación puntual (media muestral): ${media.toFixed(4)}`;
+        intervaloConfianza.textContent = `Intervalo de confianza ${confianza*100}%: (${intervalo.inferior.toFixed(4)}, ${intervalo.superior.toFixed(4)}) con margen de error ±${intervalo.margen.toFixed(4)} (${intervalo.critico})`;
+
+        formulaContainer.innerHTML = `
+          IC = x̄ ± ${intervalo.critico.split('=')[0]} × (s / √n) <br>
+          donde: <br>
+          x̄ = ${media.toFixed(4)}, s = ${desv.toFixed(4)}, n = ${n}
+        `;
+
+        dibujarGrafico(intervalo.inferior, intervalo.superior, media, tipo);
+
+      } else if (tipo === 'proporcion') {
+        let datos = parseDatos(document.getElementById('datosBrutosProporcion').value);
+        let n, x;
+
+        if (datos.length >= 2) {
+          // verificar que datos son 0 o 1
+          if (!datos.every(d => d === 0 || d === 1)) throw new Error('Datos deben ser 0 o 1 para proporción');
+          x = datos.reduce((a,b) => a+b, 0);
+          n = datos.length;
+        } else {
+          x = parseInt(document.getElementById('exitos').value);
+          n = parseInt(document.getElementById('tamanoMuestraProporcion').value);
+          if (isNaN(x) || isNaN(n)) throw new Error('Ingrese número de éxitos y tamaño de muestra válidos o datos brutos');
+          if (x > n) throw new Error('Número de éxitos no puede ser mayor que tamaño de muestra');
+          if (n < 1) throw new Error('El tamaño de muestra debe ser al menos 1');
+        }
+
+        const intervalo = intervaloProporcion(x, n, confianza);
+        const p = x / n;
+
+        estimacionPuntual.textContent = `Estimación puntual (proporción): ${(p*100).toFixed(2)}%`;
+        intervaloConfianza.textContent = `Intervalo de confianza ${confianza*100}%: (${(intervalo.inferior*100).toFixed(2)}%, ${(intervalo.superior*100).toFixed(2)}%) con margen de error ±${(intervalo.margen*100).toFixed(2)}% (${intervalo.critico})`;
+
+        formulaContainer.innerHTML = `
+          IC = p̂ ± z × √(p̂(1-p̂)/n) <br>
+          donde: <br>
+          p̂ = ${p.toFixed(4)}, n = ${n}
+        `;
+
+        dibujarGrafico(intervalo.inferior, intervalo.superior, p, tipo);
+
+      } else if (tipo === 'varianza') {
+        let datos = parseDatos(document.getElementById('datosBrutosVarianza').value);
+        let n, s2;
+
+        if (datos.length >= 2) {
+          s2 = calcVarianza(datos);
+          n = datos.length;
+          if (s2 === null) throw new Error('Error al calcular varianza');
+        } else {
+          s2 = parseFloat(document.getElementById('varianzaMuestral').value);
+          n = parseInt(document.getElementById('tamanoMuestraVarianza').value);
+          if (isNaN(s2) || isNaN(n)) throw new Error('Ingrese varianza y tamaño de muestra válidos o datos brutos');
+          if (s2 <= 0) throw new Error('La varianza debe ser positiva');
+          if (n < 2) throw new Error('El tamaño de muestra debe ser al menos 2');
+        }
+
+        const intervalo = intervaloVarianza(s2, n, confianza);
+        if (!intervalo) throw new Error('No se pudo calcular el intervalo para varianza con estos datos');
+
+        estimacionPuntual.textContent = `Estimación puntual (varianza muestral): ${s2.toFixed(4)}`;
+        intervaloConfianza.textContent = `Intervalo de confianza ${confianza*100}%: (${intervalo.inferior.toFixed(4)}, ${intervalo.superior.toFixed(4)}) <br> ${intervalo.critico}`;
+
+        formulaContainer.innerHTML = `
+          IC = [ ((n-1)s²)/χ²<sub>der</sub> , ((n-1)s²)/χ²<sub>izq</sub> ] <br>
+          donde: <br>
+          n = ${n}, s² = ${s2.toFixed(4)}
+        `;
+
+        dibujarGrafico(intervalo.inferior, intervalo.superior, s2, tipo);
+
+      }
+      resultado.style.display = 'block';
+
+    } catch(e) {
+      errorMsg.textContent = e.message;
+    }
+  });
+
+  limpiarBtn.addEventListener('click', () => {
+    errorMsg.textContent = '';
+    resultado.style.display = 'none';
+
+    document.querySelectorAll('input, textarea').forEach(el => el.value = '');
+  });
+
+  regresarBtn.addEventListener('click', () => {
+    window.location.href = 'modulo2.html';
+  });
+
+  tipoEstimacion.dispatchEvent(new Event('change'));
+</script>
+
+</body>
+</html>

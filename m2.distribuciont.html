@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Calculadora Distribución t</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #000000;
+      margin: 0;
+      padding: 20px;
+      color: white;
+    }
+    h1 {
+      text-align: center;
+      color: #00cc44;
+      margin-bottom: 5px;
+    }
+    .container {
+      max-width: 800px;
+      background: #111;
+      margin: 20px auto;
+      padding: 25px 30px;
+      box-shadow: 0 2px 10px rgba(0, 255, 0, 0.2);
+      border-radius: 8px;
+      color: white;
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: 600;
+    }
+    select,
+    input[type='number'] {
+      width: 100%;
+      margin-top: 6px;
+      padding: 8px 10px;
+      font-size: 1rem;
+      border: 1.8px solid #00cc44;
+      border-radius: 6px;
+      background: #222;
+      color: white;
+    }
+    select:focus,
+    input[type='number']:focus {
+      border-color: #00cc44;
+      outline: none;
+      background: #333;
+    }
+    .result {
+      margin-top: 30px;
+      padding: 20px;
+      background: #111;
+      border-radius: 8px;
+      border: 1px solid #00cc44;
+    }
+    button {
+      margin-top: 25px;
+      width: 100%;
+      padding: 12px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #fff;
+      background-color: #00cc44;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #009933;
+    }
+    .buttons-row {
+      display: flex;
+      gap: 15px;
+      margin-top: 10px;
+    }
+    .buttons-row button {
+      flex: 1;
+    }
+    #grafico {
+      margin-top: 30px;
+      display: none;
+      height: 300px; /* altura fija para mejor visualización */
+    }
+    canvas#graficoT {
+      background-color: #000000;
+      border-radius: 10px;
+      max-width: 100%;
+      height: 300px; /* altura fija para que se vea bien */
+      box-shadow: 0 4px 12px rgba(0, 204, 68, 0.8);
+    }
+    .error {
+      color: #ff4444;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Distribución t</h1>
+    <p style="text-align:center; color:#88cc88;">Selecciona el tipo de cálculo que necesitas con la distribución t</p>
+
+    <label for="valorT">Valor t</label>
+    <input type="number" id="valorT" step="any" placeholder="Ej: 2.131" />
+
+    <label for="gradosLibertad">Grados de libertad (df)</label>
+    <input type="number" id="gradosLibertad" min="1" step="1" placeholder="Ej: 10" />
+
+    <label for="tipoCalculo">Tipo de cálculo</label>
+    <select id="tipoCalculo">
+      <option value="p">P-valor (área bajo la curva)</option>
+      <option value="cuantil">Cuantil (valor t dado un área)</option>
+      <option value="ic">Intervalo de Confianza</option>
+      <option value="tamano_muestra">Cálculo Tamaño de Muestra</option>
+    </select>
+
+    <div id="cuantilSection" style="display: none;">
+      <label for="area">Área (entre 0 y 1)</label>
+      <input type="number" id="area" step="any" min="0" max="1" placeholder="Ej: 0.975" />
+    </div>
+
+    <div id="icSection" style="display: none;">
+      <label for="nivelConfianza">Nivel de confianza (porcentaje)</label>
+      <input type="number" id="nivelConfianza" step="any" min="50" max="99.9" placeholder="Ej: 95" />
+      <label for="mediaMuestra">Media muestral</label>
+      <input type="number" id="mediaMuestra" step="any" placeholder="Ej: 10" />
+      <label for="desviacion">Desviación estándar</label>
+      <input type="number" id="desviacion" step="any" placeholder="Ej: 2.5" />
+      <label for="tamanoMuestra">Tamaño de la muestra (n)</label>
+      <input type="number" id="tamanoMuestra" step="1" min="1" placeholder="Ej: 30" />
+    </div>
+
+    <div id="tamanoMuestraSection" style="display: none;">
+      <label for="nivelConfianzaTM">Nivel de confianza (porcentaje)</label>
+      <input type="number" id="nivelConfianzaTM" step="any" min="50" max="99.9" placeholder="Ej: 95" />
+      <label for="desviacionTM">Desviación estándar</label>
+      <input type="number" id="desviacionTM" step="any" placeholder="Ej: 2.5" />
+      <label for="margenErrorTM">Margen de error</label>
+      <input type="number" id="margenErrorTM" step="any" placeholder="Ej: 0.5" />
+    </div>
+
+    <button id="calcularBtn">Calcular</button>
+    <div class="buttons-row">
+      <button id="limpiarBtn">Limpiar</button>
+      <button id="regresarBtn" onclick=" window.location.href = 'modulo2.html'">Regresar</button>
+    </div>
+
+    <div class="result" id="resultado"></div>
+    <div id="grafico">
+      <canvas id="graficoT"></canvas>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jstat/1.9.4/jstat.min.js"></script>
+  <script>
+    const tipoCalculo = document.getElementById('tipoCalculo');
+    const cuantilSection = document.getElementById('cuantilSection');
+    const icSection = document.getElementById('icSection');
+    const tamanoMuestraSection = document.getElementById('tamanoMuestraSection');
+    const resultado = document.getElementById('resultado');
+    const graficoContainer = document.getElementById('grafico');
+    let chart;
+
+    tipoCalculo.addEventListener('change', () => {
+      cuantilSection.style.display = tipoCalculo.value === 'cuantil' ? 'block' : 'none';
+      icSection.style.display = tipoCalculo.value === 'ic' ? 'block' : 'none';
+      tamanoMuestraSection.style.display = tipoCalculo.value === 'tamano_muestra' ? 'block' : 'none';
+      document.getElementById('valorT').value = '';
+      document.getElementById('gradosLibertad').value = '';
+      resultado.innerHTML = '';
+      if (chart) chart.destroy();
+      graficoContainer.style.display = 'none';
+    });
+
+    document.getElementById('calcularBtn').addEventListener('click', () => {
+      const t = parseFloat(document.getElementById('valorT').value);
+      const df = parseInt(document.getElementById('gradosLibertad').value);
+      const tipo = tipoCalculo.value;
+      const area = parseFloat(document.getElementById('area').value);
+      resultado.innerHTML = '';
+      if (!df || df <= 0 || isNaN(df)) {
+        resultado.innerHTML = '<span class="error">Grados de libertad inválidos.</span>';
+        return;
+      }
+      let resHtml = '';
+      if (tipo === 'p') {
+        if (isNaN(t)) {
+          resultado.innerHTML = '<span class="error">Valor t inválido.</span>';
+          return;
+        }
+        const p = 2 * (1 - jStat.studentt.cdf(Math.abs(t), df));
+        resHtml = `<strong>P-valor:</strong> ${p.toFixed(6)}`;
+        dibujarGrafico(t, df);
+      } else if (tipo === 'cuantil') {
+        if (isNaN(area) || area <= 0 || area >= 1) {
+          resultado.innerHTML = '<span class="error">Área inválida (debe estar entre 0 y 1).</span>';
+          return;
+        }
+        const tValue = jStat.studentt.inv(area, df);
+        resHtml = `<strong>Valor t:</strong> ${tValue.toFixed(6)}`;
+      } else if (tipo === 'ic') {
+        const nivel = parseFloat(document.getElementById('nivelConfianza').value);
+        const media = parseFloat(document.getElementById('mediaMuestra').value);
+        const desviacion = parseFloat(document.getElementById('desviacion').value);
+        const n = parseInt(document.getElementById('tamanoMuestra').value);
+        if (isNaN(nivel) || isNaN(media) || isNaN(desviacion) || isNaN(n) || n <= 0) {
+          resultado.innerHTML = '<span class="error">Datos inválidos para intervalo de confianza.</span>';
+          return;
+        }
+        const alpha = 1 - nivel / 100;
+        const tCrit = jStat.studentt.inv(1 - alpha / 2, df);
+        const error = tCrit * (desviacion / Math.sqrt(n));
+        const inf = media - error;
+        const sup = media + error;
+        resHtml = `<strong>IC del ${nivel}%:</strong><br>[ ${inf.toFixed(4)} , ${sup.toFixed(4)} ]`;
+      } else if (tipo === 'tamano_muestra') {
+        const nivel = parseFloat(document.getElementById('nivelConfianzaTM').value);
+        const desviacion = parseFloat(document.getElementById('desviacionTM').value);
+        const margen = parseFloat(document.getElementById('margenErrorTM').value);
+        if (isNaN(nivel) || isNaN(desviacion) || isNaN(margen) || margen <= 0) {
+          resultado.innerHTML = '<span class="error">Datos inválidos para tamaño de muestra.</span>';
+          return;
+        }
+        const alpha = 1 - nivel / 100;
+        const tCrit = jStat.studentt.inv(1 - alpha / 2, df);
+        const n = Math.ceil(Math.pow((tCrit * desviacion) / margen, 2));
+        resHtml = `<strong>Tamaño de muestra requerido:</strong> ${n}`;
+      }
+
+      resultado.innerHTML = resHtml;
+      if (tipo !== 'p' && chart) {
+        chart.destroy();
+        graficoContainer.style.display = 'none';
+      }
+    });
+
+    document.getElementById('limpiarBtn').addEventListener('click', () => {
+      document.getElementById('valorT').value = '';
+      document.getElementById('gradosLibertad').value = '';
+      document.getElementById('area').value = '';
+      document.getElementById('nivelConfianza').value = '';
+      document.getElementById('mediaMuestra').value = '';
+      document.getElementById('desviacion').value = '';
+      document.getElementById('tamanoMuestra').value = '';
+      document.getElementById('nivelConfianzaTM').value = '';
+      document.getElementById('desviacionTM').value = '';
+      document.getElementById('margenErrorTM').value = '';
+      resultado.innerHTML = '';
+      if (chart) chart.destroy();
+      graficoContainer.style.display = 'none';
+    });
+
+    // Función para dibujar gráfico con área p-valor en colas izquierda y derecha
+    function dibujarGrafico(t, df) {
+      graficoContainer.style.display = 'block';
+      if (chart) chart.destroy();
+      const ctx = document.getElementById('graficoT').getContext('2d');
+      const step = 0.1, minX = -5, maxX = 5;
+      const data = [];
+      const dataFillLeft = [];
+      const dataFillRight = [];
+
+      for (let x = minX; x <= maxX; x += step) {
+        const y = jStat.studentt.pdf(x, df);
+        data.push({ x, y });
+
+        if (x <= -Math.abs(t)) {
+          dataFillLeft.push({ x, y });
+        } else {
+          dataFillLeft.push({ x, y: 0 });
+        }
+
+        if (x >= Math.abs(t)) {
+          dataFillRight.push({ x, y });
+        } else {
+          dataFillRight.push({ x, y: 0 });
+        }
+      }
+
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          datasets: [
+            {
+              label: 'Distribución t',
+              data,
+              borderColor: '#00cc44',
+              borderWidth: 2,
+              fill: false,
+              pointRadius: 0,
+              tension: 0.3,
+            },
+            {
+              label: 'Área p-valor izquierda',
+              data: dataFillLeft,
+              backgroundColor: '#00cc4480',
+              fill: true,
+              pointRadius: 0,
+              borderWidth: 0,
+              tension: 0,
+              showLine: true,
+            },
+            {
+              label: 'Área p-valor derecha',
+              data: dataFillRight,
+              backgroundColor: '#00cc4480',
+              fill: true,
+              pointRadius: 0,
+              borderWidth: 0,
+              tension: 0,
+              showLine: true,
+            }
+          ]
+        },
+        options: {
+          scales: {
+            x: {
+              type: 'linear',
+              title: { display: true, text: 't', color: 'white', font: { size: 16, weight: 'bold' } },
+              ticks: { color: 'white' },
+              min: minX,
+              max: maxX,
+            },
+            y: {
+              title: { display: true, text: 'Densidad de probabilidad', color: 'white', font: { size: 16, weight: 'bold' } },
+              ticks: { color: 'white' },
+              beginAtZero: true
+            }
+          },
+          plugins: {
+            legend: {
+              labels: { color: 'white' }
+            }
+          },
+          responsive: true,
+          maintainAspectRatio: false
+        }
+      });
+    }
+  </script>
+</body>
+</html>

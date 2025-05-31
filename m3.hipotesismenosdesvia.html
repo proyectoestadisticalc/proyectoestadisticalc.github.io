@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Prueba Hipótesis (σ desconocida)</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jstat/1.9.4/jstat.min.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #000000;
+      margin: 0;
+      padding: 20px;
+      color: white;
+    }
+    h1 {
+      text-align: center;
+      color: #1E90FF;
+      margin-bottom: 5px;
+    }
+    .container {
+      max-width: 700px;
+      background: #111;
+      margin: 20px auto;
+      padding: 25px 30px;
+      box-shadow: 0 2px 15px rgba(30,144,255,0.3);
+      border-radius: 8px;
+      color: white;
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: 600;
+      color: white;
+    }
+    input[type=number], select {
+      width: 100%;
+      margin-top: 6px;
+      padding: 10px 12px;
+      font-size: 1rem;
+      border: 2px solid #1E90FF;
+      border-radius: 8px;
+      background: #222;
+      color: white;
+      box-sizing: border-box;
+    }
+    input[type=number]:focus, select:focus {
+      border-color: #66ccff;
+      outline: none;
+      background: #333;
+      color: white;
+    }
+    .help-text {
+      font-size: 0.85rem;
+      color: #66ccff;
+      margin-top: 3px;
+    }
+    .result {
+      margin-top: 30px;
+      padding: 20px;
+      background: #111;
+      border-radius: 8px;
+      border: 1.5px solid #1E90FF;
+      color: white;
+      font-size: 1.1rem;
+      font-family: 'Courier New', Courier, monospace;
+    }
+    button {
+      margin-top: 20px;
+      width: 100%;
+      padding: 14px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: #fff;
+      background-color: #1E90FF;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #007ACC;
+    }
+    .graph-container {
+      margin-top: 30px;
+      height: 350px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Prueba de Hipótesis para Media para desviación estándar con poblacional desconocida</h1>
+    <p style="text-align:center; color:#1E90FF;">
+      Calculadora para pruebas de hipótesis para desviación estándar con poblacional desconocida
+    </p>
+
+    <label for="alpha">Nivel de significancia (α):</label>
+    <input type="number" id="alpha" min="0.001" max="0.2" step="0.001" value="0.05" />
+    <small class="help-text">Ejemplo: 0.05, 0.01, 0.10</small>
+
+    <label for="test-type">Tipo de prueba:</label>
+    <select id="test-type">
+      <option value="left">Una cola izquierda (H₁: μ &lt; μ₀)</option>
+      <option value="right">Una cola derecha (H₁: μ &gt; μ₀)</option>
+      <option value="two">Dos colas (H₁: μ ≠ μ₀)</option>
+    </select>
+
+    <label for="media-poblacional">Media poblacional (μ₀):</label>
+    <input type="number" id="media-poblacional" step="0.0001" />
+
+    <label for="media-muestral">Media muestral (x̄):</label>
+    <input type="number" id="media-muestral" step="0.0001" />
+
+    <label for="desviacion-muestral">Desviación muestral (s):</label>
+    <input type="number" id="desviacion-muestral" step="0.0001" min="0" />
+
+    <label for="n">Tamaño de muestra (n):</label>
+    <input type="number" id="n" min="2" step="1" />
+
+    <button id="calcularBtn">Calcular</button>
+    <button id="limpiarBtn">Limpiar</button>
+    <button id="btnRegresar">Regresar</button>
+
+    <div id="result" class="result"></div>
+    <div class="graph-container">
+      <canvas id="chart"></canvas>
+    </div>
+  </div>
+
+  <script>
+    const alphaInput = document.getElementById('alpha');
+    const testType = document.getElementById('test-type');
+    const mu0Input = document.getElementById('media-poblacional');
+    const xbarInput = document.getElementById('media-muestral');
+    const sInput = document.getElementById('desviacion-muestral');
+    const nInput = document.getElementById('n');
+    const resultDiv = document.getElementById('result');
+    const ctx = document.getElementById('chart').getContext('2d');
+    let chart;
+
+    document.getElementById('btnRegresar').onclick = () => {
+      window.location.href = 'modulo3.html';
+    };
+
+    document.getElementById('calcularBtn').onclick = () => {
+      const alpha = parseFloat(alphaInput.value);
+      const tail = testType.value;
+      const mu0 = parseFloat(mu0Input.value);
+      const xbar = parseFloat(xbarInput.value);
+      const s = parseFloat(sInput.value);
+      const n = parseInt(nInput.value);
+
+      if (isNaN(alpha) || isNaN(mu0) || isNaN(xbar) || isNaN(s) || isNaN(n) || s <= 0 || n < 2) {
+        alert('Por favor completa todos los campos correctamente.');
+        return;
+      }
+
+      const df = n - 1;
+      const se = s / Math.sqrt(n);
+      const t = (xbar - mu0) / se;
+
+      let p, cv;
+      if (tail === 'left') {
+        p = jStat.studentt.cdf(t, df);
+        cv = [jStat.studentt.inv(alpha, df)];
+      } else if (tail === 'right') {
+        p = 1 - jStat.studentt.cdf(t, df);
+        cv = [jStat.studentt.inv(1 - alpha, df)];
+      } else {
+        p = 2 * Math.min(jStat.studentt.cdf(t, df), 1 - jStat.studentt.cdf(t, df));
+        cv = [
+          jStat.studentt.inv(alpha / 2, df),
+          jStat.studentt.inv(1 - alpha / 2, df)
+        ];
+      }
+
+      const rechaza = (tail === 'left' && t <= cv[0]) ||
+                      (tail === 'right' && t >= cv[0]) ||
+                      (tail === 'two' && (t <= cv[0] || t >= cv[1]));
+
+resultDiv.innerHTML = `
+<strong>Resultados:</strong><br>
+- Estadístico t: <strong>${t.toFixed(4)}</strong><br>
+- Valor p: <strong>${p.toFixed(6)}</strong><br>
+- Grados de libertad: <strong>${df}</strong><br>
+- Nivel de significancia (α): <strong>${alpha}</strong><br>
+- Valor(es) crítico(s): <strong>${cv.map(v => v.toFixed(4)).join(', ')}</strong><br>
+- Tamaño de muestra (n): <strong>${n}</strong><br>
+- Error estándar (SE): <strong>${se.toFixed(4)}</strong><br><br>
+${rechaza ? "<span style='color:#00FF00'>✔ Rechazamos H₀</span>" : "<span style='color:#FF4444'>✘ No rechazamos H₀</span>"}
+`;
+
+
+      // Graficar
+      const xVals = [], yVals = [];
+      for (let x = -5; x <= 5; x += 0.01) {
+        xVals.push(x);
+        yVals.push(jStat.studentt.pdf(x, df));
+      }
+
+      const critRegions = [];
+      if (tail === 'left') {
+        critRegions.push({from: -5, to: cv[0]});
+      } else if (tail === 'right') {
+        critRegions.push({from: cv[0], to: 5});
+      } else {
+        critRegions.push({from: -5, to: cv[0]}, {from: cv[1], to: 5});
+      }
+
+      const pRegion = (tail === 'two' && t < 0) ? {from: -5, to: t} :
+                      (tail === 'two') ? {from: t, to: 5} :
+                      (tail === 'left') ? {from: -5, to: t} :
+                      {from: t, to: 5};
+
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: xVals,
+          datasets: [
+            {
+              label: 'Distribución t',
+              data: yVals,
+              borderColor: '#1E90FF',
+              borderWidth: 2,
+              fill: false,
+              pointRadius: 0
+            },
+            ...critRegions.map(r => ({
+              label: 'Región crítica',
+              data: xVals.map(x => (x >= r.from && x <= r.to) ? jStat.studentt.pdf(x, df) : NaN),
+              borderWidth: 0,
+              backgroundColor: 'rgba(255, 99, 132, 0.5)',
+              fill: true,
+              pointRadius: 0
+            })),
+            {
+              label: 'Área p-valor',
+              data: xVals.map(x => (x >= pRegion.from && x <= pRegion.to) ? jStat.studentt.pdf(x, df) : NaN),
+              borderWidth: 0,
+              backgroundColor: 'rgba(54, 162, 235, 0.5)',
+              fill: true,
+              pointRadius: 0
+            },
+            {
+              label: 'Estadístico t',
+              data: xVals.map(x => Math.abs(x - t) < 0.01 ? jStat.studentt.pdf(x, df) : NaN),
+              type: 'scatter',
+              backgroundColor: '#ffff00',
+              pointRadius: 6
+            }
+          ]
+        },
+        options: {
+          scales: {
+            x: {
+              title: {display: true, text: 't', color: 'white'},
+              ticks: {color: 'white'},
+              grid: {color: '#444'}
+            },
+            y: {
+              title: {display: true, text: 'Densidad', color: 'white'},
+              ticks: {color: 'white'},
+              grid: {color: '#444'}
+            }
+          },
+          plugins: {
+            legend: {labels: {color: 'white'}},
+            tooltip: {enabled: false}
+          }
+        }
+      });
+    };
+
+    document.getElementById('limpiarBtn').onclick = () => {
+      alphaInput.value = '0.05';
+      testType.value = 'two';
+      mu0Input.value = '';
+      xbarInput.value = '';
+      sInput.value = '';
+      nInput.value = '';
+      resultDiv.textContent = '';
+      if (chart) chart.destroy();
+    };
+  </script>
+</body>
+</html>

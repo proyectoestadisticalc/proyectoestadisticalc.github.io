@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Módulo 1</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* Reset y base */
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #111;
+      color: #eee;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    header {
+      background-color: #c40000;
+      padding: 2rem 1rem;
+      text-align: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    }
+
+    header h1 {
+      font-size: 2.75rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 1.2px;
+      user-select: none;
+    }
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+      max-width: 900px;
+      margin: 0 auto;
+      text-align: center;
+      gap: 2rem;
+    }
+
+    main p {
+      font-size: 1.2rem;
+      color: #ccc;
+      max-width: 700px;
+      margin-bottom: 1rem;
+    }
+
+.botones {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); 
+  gap: 1.25rem;
+  width: 100%;
+  max-width: 900px;
+}
+
+.botones button {
+  background-color: #c40000;
+  color: #fff;
+  border: none;
+  padding: 1rem 1rem; 
+  font-size: 1.1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  user-select: none;
+  width: 100%;
+  white-space: normal; 
+  line-height: 1.3;
+}
+
+    .botones button:hover,
+    .botones button:focus {
+      background-color: #e60000;
+      transform: translateY(-3px);
+      outline: none;
+      box-shadow: 0 6px 16px rgba(230, 0, 0, 0.8);
+    }
+
+    .botones:last-of-type {
+      max-width: 300px;
+      margin-top: 1rem;
+      justify-content: center;
+      display: flex;
+    }
+
+    footer {
+      background-color: #1a1a1a;
+      text-align: center;
+      padding: 1rem;
+      font-size: 0.9rem;
+      color: #aaa;
+      user-select: none;
+    }
+
+    @media (max-width: 480px) {
+      header h1 {
+        font-size: 2rem;
+      }
+
+      main p {
+        font-size: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Módulo 1</h1>
+  </header>
+
+  <main>
+    <p>Selecciona el tema del Módulo I que quieres estudiar.</p>
+
+    <div class="botones" role="list">
+      <button role="listitem" onclick="location.href='m1.media.html'" aria-label="Ir a Media">Media</button>
+      <button role="listitem" onclick="location.href='m1.mediana.html'" aria-label="Ir a Mediana">Mediana</button>
+      <button role="listitem" onclick="location.href='m1.moda.html'" aria-label="Ir a Moda">Moda</button>
+      <button role="listitem" onclick="location.href='m1.varacion.html'" aria-label="Ir a Variables Aleatorias">Variables aleatorias</button>
+      <button role="listitem" onclick="location.href='m1.Binomial.html'" aria-label="Ir a Distribución Binomial">Distribución Binomial</button>
+      <button role="listitem" onclick="location.href='m1.multinomial.html'" aria-label="Ir a Distribución Multinomial">Distribución Multinomial</button>
+      <button role="listitem" onclick="location.href='m1.poisson.html'" aria-label="Ir a Distribución Poisson">Distribución Poisson</button>
+      <button role="listitem" onclick="location.href='m1.normal.html'" aria-label="Ir a Distribución Normal">Distribución Normal</button>
+    </div>
+
+    <div class="botones" aria-label="Controles generales">
+      <button onclick="location.href='index.html'" aria-label="Regresar a la página principal">Regresar</button>
+    </div>
+  </main>
+
+  <footer>
+    &copy; 2025 Proyecto Estadística - Todos los derechos reservados
+  </footer>
+
+</body>
+</html>

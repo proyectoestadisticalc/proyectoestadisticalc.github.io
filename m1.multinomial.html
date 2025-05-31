@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Calculadora Multinomial</title>
+  <style>
+    :root {
+      --rojo: #c40000;
+      --gris: #ccc;
+    }
+
+    body, html {
+      height: 100%;
+      margin: 0;
+      background-color: #111;
+      color: white;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+    }
+
+    main {
+      max-width: 700px;
+      width: 100%;
+      background-color: #222;
+      padding: 2.5rem;
+      border-radius: 10px;
+      box-shadow: 0 0 15px var(--rojo);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    header {
+      text-align: center;
+      width: 100%;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 2rem;
+      color: var(--rojo);
+      text-shadow: 1px 1px 0 #000;
+    }
+
+    .descripcion {
+      font-size: 1rem;
+      color: var(--gris);
+      font-style: italic;
+      line-height: 1.5;
+      text-align: center;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      width: 100%;
+    }
+
+    label {
+      font-weight: bold;
+    }
+
+    input, select {
+      padding: 0.8rem;
+      background-color: #333;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 1rem;
+      width: 100%;
+    }
+
+    .categorias {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .categoria {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .categoria > div {
+      flex: 1 1 150px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    button {
+      padding: 0.8rem;
+      background-color: var(--rojo);
+      color: white;
+      font-size: 1rem;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #ff1a1a;
+    }
+
+    .botones {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+    }
+
+    #resultado {
+      width: 100%;
+      word-wrap: break-word;
+      text-align: center;
+      margin-top: 1rem;
+      font-size: 1.1rem;
+    }
+
+    @media (max-width: 600px) {
+      main {
+        padding: 1.5rem;
+      }
+      .categoria {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Calculadora Multinomial</h1>
+      <p class="descripcion">
+        Ingresa el número de ensayos, categorías, probabilidades y conteos para calcular la probabilidad multinomial.
+      </p>
+    </header>
+
+    <form id="multinomialForm">
+      <label for="n">Número de ensayos (n):</label>
+      <input type="number" id="n" min="1" required />
+
+      <label for="m">Número de categorías:</label>
+      <select id="m" required>
+        <option value="2">2</option>
+        <option value="3" selected>3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+      </select>
+
+      <div id="categoriasContainer" class="categorias"></div>
+
+      <button type="submit">Calcular Probabilidad</button>
+    </form>
+
+    <div class="botones">
+      <button id="btnLimpiar" type="button">Limpiar</button>
+      <button id="btnRegresar" type="button">Regresar</button>
+    </div>
+
+    <div id="resultado"></div>
+  </main>
+
+  <script>
+    const form = document.getElementById('multinomialForm');
+    const categoriasContainer = document.getElementById('categoriasContainer');
+    const resultado = document.getElementById('resultado');
+    const mSelect = document.getElementById('m');
+    const nInput = document.getElementById('n');
+
+    const ejemplo = {
+      n: 10,
+      m: 3,
+      probabilidades: [0.2, 0.5, 0.3],
+      conteos: [2, 5, 3]
+    };
+
+    function factorial(num) {
+      return num <= 1 ? 1 : num * factorial(num - 1);
+    }
+
+    function crearInputsCategorias(m, ps = [], ks = []) {
+      categoriasContainer.innerHTML = '';
+      for (let i = 0; i < m; i++) {
+        const div = document.createElement('div');
+        div.classList.add('categoria');
+        div.innerHTML = `
+          <div>
+            <label for="p${i + 1}">Probabilidad p${i + 1}:</label>
+            <input type="number" id="p${i + 1}" min="0" max="1" step="0.01" value="${ps[i] ?? (1 / m).toFixed(2)}" required />
+          </div>
+          <div>
+            <label for="k${i + 1}">Conteo k${i + 1}:</label>
+            <input type="number" id="k${i + 1}" min="0" value="${ks[i] ?? 0}" required />
+          </div>
+        `;
+        categoriasContainer.appendChild(div);
+      }
+    }
+
+    function multinomialProbability(n, ks, ps) {
+      let numerator = factorial(n);
+      let denominator = ks.reduce((acc, k) => acc * factorial(k), 1);
+      let probProduct = ks.reduce((acc, k, i) => acc * Math.pow(ps[i], k), 1);
+      return (numerator / denominator) * probProduct;
+    }
+
+    function cargarEjemplo() {
+      nInput.value = ejemplo.n;
+      mSelect.value = ejemplo.m;
+      crearInputsCategorias(ejemplo.m, ejemplo.probabilidades, ejemplo.conteos);
+      resultado.innerHTML = '';
+    }
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const n = parseInt(nInput.value);
+      const m = parseInt(mSelect.value);
+      let ps = [], ks = [], sumaP = 0, sumaK = 0;
+
+      for (let i = 1; i <= m; i++) {
+        const p = parseFloat(document.getElementById(`p${i}`).value);
+        const k = parseInt(document.getElementById(`k${i}`).value);
+        if (isNaN(p) || p < 0 || p > 1) {
+          resultado.innerHTML = `<p style="color:red">Probabilidades deben estar entre 0 y 1.</p>`;
+          return;
+        }
+        if (isNaN(k) || k < 0) {
+          resultado.innerHTML = `<p style="color:red">Conteos deben ser positivos o cero.</p>`;
+          return;
+        }
+        ps.push(p);
+        ks.push(k);
+        sumaP += p;
+        sumaK += k;
+      }
+
+      if (Math.abs(sumaP - 1) > 0.001) {
+        resultado.innerHTML = `<p style="color:red">La suma de probabilidades debe ser 1. Actual: ${sumaP.toFixed(4)}</p>`;
+        return;
+      }
+
+      if (sumaK !== n) {
+        resultado.innerHTML = `<p style="color:red">La suma de conteos debe ser igual a n (${n}). Actual: ${sumaK}</p>`;
+        return;
+      }
+
+      const prob = multinomialProbability(n, ks, ps);
+      resultado.innerHTML = `<p>Probabilidad multinomial: <strong>${prob.toPrecision(6)}</strong></p>`;
+    });
+
+    mSelect.addEventListener('change', () => {
+      crearInputsCategorias(parseInt(mSelect.value));
+      resultado.innerHTML = '';
+    });
+
+    document.getElementById('btnLimpiar').addEventListener('click', () => {
+      resultado.innerHTML = '';
+      cargarEjemplo();
+    });
+
+    document.getElementById('btnRegresar').addEventListener('click', () => {
+      window.location.href = 'modulo1.html';
+    });
+
+    cargarEjemplo();
+  </script>
+</body>
+</html>

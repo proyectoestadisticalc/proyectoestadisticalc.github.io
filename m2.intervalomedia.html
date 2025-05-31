@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Calculadora de Intervalo de Confianza para la Media</title>
+<style>
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #000000;
+    margin: 0; 
+    padding: 20px;
+    color: white;
+  }
+  h1 {
+    text-align: center;
+    color: #00cc44;
+    margin-bottom: 5px;
+  }
+  .container {
+    max-width: 700px;
+    background: #111;
+    margin: 20px auto;
+    padding: 25px 30px;
+    box-shadow: 0 2px 10px rgba(0,255,0,0.2);
+    border-radius: 8px;
+    color: white;
+  }
+  label {
+    display: block;
+    margin-top: 15px;
+    font-weight: 600;
+    color: white;
+  }
+  select, input[type=number], textarea {
+    width: 100%;
+    margin-top: 6px;
+    padding: 8px 10px;
+    font-size: 1rem;
+    border: 1.8px solid #00cc44;
+    border-radius: 6px;
+    background: #222;
+    color: white;
+    transition: border-color 0.25s ease;
+  }
+  select:focus, input[type=number]:focus, textarea:focus {
+    border-color: #00cc44;
+    outline: none;
+    background: #333;
+    color: white;
+  }
+  .help-text {
+    font-size: 0.85rem;
+    color: #66cc66;
+    margin-top: 3px;
+  }
+  .error {
+    color: #cc4444;
+    font-weight: 700;
+    margin-top: 10px;
+  }
+  .result {
+    margin-top: 30px;
+    padding: 20px;
+    background: #111;
+    border-radius: 8px;
+    border: 1px solid #00cc44;
+    color: white;
+  }
+  .formula {
+    font-family: 'Courier New', Courier, monospace;
+    background: #002200;
+    padding: 10px;
+    border-radius: 5px;
+    margin-top: 10px;
+    user-select: all;
+    color: #00cc44;
+  }
+  .copy-btn {
+    margin-left: 10px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    color: #00cc44;
+    text-decoration: underline;
+    background: none;
+    border: none;
+  }
+  .graph-container {
+    margin-top: 25px;
+    text-align: center;
+  }
+  svg {
+    max-width: 100%;
+    height: 80px;
+  }
+  button#calcularBtn {
+    margin-top: 25px;
+    width: 100%;
+    padding: 12px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+    background-color: #00cc44;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  button#calcularBtn:hover {
+    background-color: #009933;
+    color: #fff;
+  }
+  .buttons-row {
+    display: flex;
+    gap: 15px;
+    margin-top: 10px;
+  }
+  button#limpiarBtn,
+  button#regresarBtn {
+    flex: 1;
+    padding: 12px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+    background-color: #00cc44;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  button#limpiarBtn:hover,
+  button#regresarBtn:hover {
+    background-color: #009933;
+    color: #fff;
+  }
+  canvas {
+    margin-top: 20px;
+    max-width: 100%;
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <h1>Intervalo de Confianza para la Media</h1>
+    <p style="text-align:center; color:#88cc88;">Calcula el intervalo de confianza para la media </p>
+
+    <label for="dataInput">Datos (separados por coma, espacio o nueva línea)</label>
+    <textarea id="dataInput" placeholder="Ejemplo: 12, 15, 14, 16, 11"></textarea>
+
+    <p style="text-align:center; margin: 10px 0;">O ingresa manualmente:</p>
+
+    <label for="meanInput">Media (μ):</label>
+    <input type="number" id="meanInput" step="any" placeholder="Ej: 14.5" />
+
+    <label for="stdInput">Desviación estándar (σ):</label>
+    <input type="number" id="stdInput" step="any" placeholder="Ej: 2.3" />
+
+    <label for="nInput">Tamaño de muestra (n):</label>
+    <input type="number" id="nInput" min="2" placeholder="Ej: 25" />
+
+    <label for="confLevel">Nivel de confianza (%):</label>
+    <input type="number" id="confLevel" min="50" max="99.9" step="0.1" value="95" />
+
+    <label for="distChoice">Distribución:</label>
+    <select id="distChoice">
+      <option value="auto">(t para n<30, z para n≥30)</option>
+      <option value="t">t </option>
+      <option value="z">Normal (z)</option>
+    </select>
+
+    <button id="calcularBtn">Calcular Intervalo</button>
+
+    <div class="buttons-row">
+      <button id="limpiarBtn">Limpiar</button>
+      <button id="regresarBtn">Regresar</button>
+    </div>
+
+    <div class="result" id="result" style="display:none;"></div>
+
+    <canvas id="chart" width="650" height="120" style="display:none;"></canvas>
+  </div>
+
+<script>
+  function calcularMedia(datos) {
+    const suma = datos.reduce((a,b) => a + b, 0);
+    return suma / datos.length;
+  }
+
+  function calcularDesviacion(datos) {
+    const media = calcularMedia(datos);
+    const varianza = datos.reduce((sum, val) => sum + (val - media) ** 2, 0) / (datos.length -1);
+    return Math.sqrt(varianza);
+  }
+
+  function zCritico(confianza) {
+    let p = 1 - (1 - confianza) / 2;
+    if (p < 0.5) {
+      return -rationalApproximation( Math.sqrt(-2.0 * Math.log(p)) );
+    } else {
+      return rationalApproximation( Math.sqrt(-2.0 * Math.log(1-p)) );
+    }
+    function rationalApproximation(t) {
+      const c0 = 2.515517;
+      const c1 = 0.802853;
+      const c2 = 0.010328;
+      const d1 = 1.432788;
+      const d2 = 0.189269;
+      const d3 = 0.001308;
+      return t - ((c0 + c1*t + c2*t*t) / (1 + d1*t + d2*t*t + d3*t*t*t));
+    }
+  }
+
+  const tTable95 = {
+    1: 12.706, 2: 4.303, 3: 3.182, 4: 2.776, 5: 2.571,
+    6: 2.447, 7: 2.365, 8: 2.306, 9: 2.262, 10: 2.228,
+    11: 2.201, 12: 2.179, 13: 2.160, 14: 2.145, 15: 2.131,
+    16: 2.120, 17: 2.110, 18: 2.101, 19: 2.093, 20: 2.086,
+    21: 2.080, 22: 2.074, 23: 2.069, 24: 2.064, 25: 2.060,
+    26: 2.056, 27: 2.052, 28: 2.048, 29: 2.045, 30: 2.042
+  };
+
+  function dibujarGrafico(media, li, ls) {
+    const canvas = document.getElementById('chart');
+    if (!canvas.getContext) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+
+    ctx.clearRect(0, 0, w, h);
+
+    const margen = 40;
+    const rango = (ls - li) * 1.4;
+    const escala = (w - 2 * margen) / rango;
+
+    const pos = (x) => margen + (x - (media - rango/2)) * escala;
+
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(margen, h/2);
+    ctx.lineTo(w - margen, h/2);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#00cc44';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(pos(li), h/2);
+    ctx.lineTo(pos(ls), h/2);
+    ctx.stroke();
+
+    ctx.fillStyle = '#009922';
+    ctx.font = 'bold 14px Arial';
+    ctx.fillText(li.toFixed(3), pos(li) - 30, h/2 - 10);
+    ctx.fillText(ls.toFixed(3), pos(ls) - 30, h/2 - 10);
+
+    ctx.fillStyle = '#ccffcc';
+    ctx.beginPath();
+    ctx.arc(pos(media), h/2, 8, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.fillText('Media', pos(media) - 20, h/2 + 25);
+  }
+
+  document.getElementById('calcularBtn').addEventListener('click', () => {
+    const dataText = document.getElementById('dataInput').value.trim();
+    let datos = [];
+    if(dataText) {
+      datos = dataText.split(/[\s,]+/).map(Number).filter(n => !isNaN(n));
+      if(datos.length < 2) {
+        alert('Por favor, ingresa al menos dos números válidos en los datos.');
+        return;
+      }
+    }
+
+    let media = parseFloat(document.getElementById('meanInput').value);
+    let std = parseFloat(document.getElementById('stdInput').value);
+    let n = parseInt(document.getElementById('nInput').value);
+    const confLevel = parseFloat(document.getElementById('confLevel').value) / 100;
+    const distChoice = document.getElementById('distChoice').value;
+
+    if(datos.length > 0) {
+      media = calcularMedia(datos);
+      std = calcularDesviacion(datos);
+      n = datos.length;
+    } else {
+      if (isNaN(media) || isNaN(std) || isNaN(n) || n < 2) {
+        alert('Por favor, ingresa datos o completa media, desviación estándar y tamaño de muestra válidos.');
+        return;
+      }
+    }
+
+    let usoT = false;
+    if(distChoice === 'auto') {
+      usoT = n < 30;
+    } else {
+      usoT = distChoice === 't';
+    }
+
+    let critico, li, ls;
+    if(usoT) {
+      // t crítico aproximado usando tabla 95%
+      // Para otros niveles, se podría usar una librería o aproximación
+      // Aquí hacemos una interpolación lineal o se usa la tabla de t con 95%
+      // Para nivel diferente, aprox normal
+      let gl = n - 1;
+      if(gl > 30) gl = 30;
+      critico = tTable95[gl] || 2.042; // fallback
+      if(confLevel !== 0.95) {
+        // Para niveles diferentes, usamos aproximación z (menos preciso)
+        critico = Math.abs(zCritico(confLevel));
+      }
+    } else {
+      critico = Math.abs(zCritico(confLevel));
+    }
+
+    const margenError = critico * std / Math.sqrt(n);
+    li = media - margenError;
+    ls = media + margenError;
+
+    const resultDiv = document.getElementById('result');
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = `
+      <h3>Resultados</h3>
+      <p><strong>Media (μ):</strong> ${media.toFixed(4)}</p>
+      <p><strong>Desviación estándar (σ):</strong> ${std.toFixed(4)}</p>
+      <p><strong>Tamaño de muestra (n):</strong> ${n}</p>
+      <p><strong>Nivel de confianza:</strong> ${(confLevel*100).toFixed(2)}%</p>
+      <p><strong>Distribución usada:</strong> ${usoT ? 't de Student' : 'Normal (z)'}</p>
+      <p><strong>Valor crítico:</strong> ${critico.toFixed(4)}</p>
+      <p><strong>Intervalo de confianza:</strong> [${li.toFixed(4)}, ${ls.toFixed(4)}]</p>
+      <p class="formula">
+        IC = μ ± (${critico.toFixed(4)}) × (σ / √n) <br/>
+        IC = ${media.toFixed(4)} ± ${margenError.toFixed(4)}
+      </p>
+    `;
+
+    dibujarGrafico(media, li, ls);
+    document.getElementById('chart').style.display = 'block';
+  });
+
+  document.getElementById('limpiarBtn').addEventListener('click', () => {
+    document.getElementById('dataInput').value = '';
+    document.getElementById('meanInput').value = '';
+    document.getElementById('stdInput').value = '';
+    document.getElementById('nInput').value = '';
+    document.getElementById('confLevel').value = 95;
+    document.getElementById('distChoice').value = 'auto';
+    document.getElementById('result').style.display = 'none';
+    document.getElementById('chart').style.display = 'none';
+  });
+
+  document.getElementById('regresarBtn').addEventListener('click', () => {
+    window.location.href = 'modulo2.html';
+  });
+</script>
+
+</body>
+</html>

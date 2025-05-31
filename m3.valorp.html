@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Calculadora Valor p (estadístico z)</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #000;
+      margin: 0;
+      padding: 20px;
+      color: white;
+    }
+    h1 {
+      text-align: center;
+      color: #1E90FF;
+      margin-bottom: 5px;
+    }
+    .container {
+      max-width: 400px;
+      background: #111;
+      margin: 20px auto;
+      padding: 25px 30px;
+      box-shadow: 0 2px 15px rgba(30,144,255,0.3);
+      border-radius: 8px;
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: 600;
+    }
+    input[type=number], select {
+      width: 100%;
+      margin-top: 6px;
+      padding: 10px 12px;
+      font-size: 1rem;
+      border: 2px solid #1E90FF;
+      border-radius: 8px;
+      background: #222;
+      color: white;
+      box-sizing: border-box;
+    }
+    input[type=number]:focus, select:focus {
+      border-color: #66ccff;
+      outline: none;
+      background: #333;
+    }
+    .result {
+      margin-top: 30px;
+      padding: 20px;
+      background: #111;
+      border-radius: 8px;
+      border: 1.5px solid #1E90FF;
+      font-size: 1.1rem;
+      font-family: 'Courier New', Courier, monospace;
+      white-space: pre-wrap;
+      color: #00ff00;
+    }
+    button {
+      margin-top: 20px;
+      width: 100%;
+      padding: 14px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: #fff;
+      background-color: #1E90FF;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #007ACC;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Calculadora Valor p con estadístico z</h1>
+
+    <label for="z">Estadístico z:</label>
+    <input type="number" id="z" step="any" placeholder="Ejemplo: 1.96" />
+
+    <label for="cola">Tipo de prueba</label>
+    <select id="cola">
+      <option value="bilateral" selected>Bilateral (≠)</option>
+      <option value="derecha">Una cola (derecha &gt;)</option>
+      <option value="izquierda">Una cola (izquierda &lt;)</option>
+    </select>
+
+    <button onclick="calcularP()">Calcular valor p</button>
+    <button onclick="limpiar()">Limpiar</button>
+    <button onclick="regresar()">Regresar</button>
+
+    <div class="result" id="resultado"></div>
+  </div>
+
+  <script>
+    function cdfNormal(z) {
+      const t = 1 / (1 + 0.2316419 * Math.abs(z));
+      const d = 0.3989423 * Math.exp(-z * z / 2);
+      let p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+      if (z > 0) {
+        return 1 - p;
+      } else {
+        return p;
+      }
+    }
+
+    function calcularP() {
+      const z = parseFloat(document.getElementById("z").value);
+      const cola = document.getElementById("cola").value;
+      const resultado = document.getElementById("resultado");
+
+      if (isNaN(z)) {
+        resultado.style.color = "red";
+        resultado.textContent = "Por favor ingresa un valor numérico para z.";
+        return;
+      }
+
+      let pValue;
+
+      if (cola === "bilateral") {
+        pValue = 2 * (1 - cdfNormal(Math.abs(z)));
+      } else if (cola === "derecha") {
+        pValue = 1 - cdfNormal(z);
+      } else {
+        pValue = cdfNormal(z);
+      }
+
+      pValue = Math.min(Math.max(pValue, 0), 1);
+
+      resultado.style.color = "#00ff00";
+      resultado.innerHTML = `Valor p = <b>${pValue.toFixed(6)}</b>`;
+    }
+
+    function limpiar() {
+      document.getElementById("z").value = "";
+      document.getElementById("cola").value = "bilateral";
+      document.getElementById("resultado").innerText = "";
+    }
+
+    function regresar() {
+      window.location.href = "modulo3.html";
+    }
+  </script>
+</body>
+</html>

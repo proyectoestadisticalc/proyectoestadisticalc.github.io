@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Prueba Hipótesis (σ conocida)</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jstat/1.9.4/jstat.min.js"></script>
+<style>
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #000000;
+  margin: 0; 
+  padding: 20px;
+  color: white;
+}
+h1 {
+  text-align: center;
+  color: #1E90FF;
+  margin-bottom: 5px;
+}
+.container {
+  max-width: 700px;
+  background: #111;
+  margin: 20px auto;
+  padding: 25px 30px;
+  box-shadow: 0 2px 15px rgba(30,144,255,0.3);
+  border-radius: 8px;
+  color: white;
+}
+label {
+  display: block;
+  margin-top: 15px;
+  font-weight: 600;
+  color: white;
+}
+input[type=number], select {
+  width: 100%;
+  margin-top: 6px;
+  padding: 10px 12px;
+  font-size: 1rem;
+  border: 2px solid #1E90FF;
+  border-radius: 8px;
+  background: #222;
+  color: white;
+  transition: border-color 0.3s ease;
+  box-sizing: border-box;
+}
+input[type=number]:focus, select:focus {
+  border-color: #66ccff;
+  outline: none;
+  background: #333;
+  color: white;
+}
+.help-text {
+  font-size: 0.85rem;
+  color: #66ccff;
+  margin-top: 3px;
+}
+.error {
+  color: #cc4444;
+  font-weight: 700;
+  margin-top: 10px;
+}
+.result {
+  margin-top: 30px;
+  padding: 20px;
+  background: #111;
+  border-radius: 8px;
+  border: 1.5px solid #1E90FF;
+  color: white;
+  font-size: 1.1rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  font-family: 'Courier New', Courier, monospace;
+}
+button#calcularBtn {
+  margin-top: 25px;
+  width: 100%;
+  padding: 15px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #fff;
+  background-color: #1E90FF;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  user-select: none;
+}
+button#calcularBtn:hover {
+  background-color: #007ACC;
+}
+button#limpiarBtn {
+  margin-top: 15px;
+  width: 100%;
+  padding: 12px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+  background-color: #1E90FF;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  user-select: none;
+}
+button#limpiarBtn:hover {
+  background-color: #007ACC;
+}
+.graph-container {
+  margin-top: 30px;
+  height: 350px;
+  position: relative;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Prueba de Hipótesis para Media con desviación estándar poblacional conocida </h1>
+  <p style="text-align:center; color:#1E90FF;">
+    Calculadora para pruebas de hipótesis para media usando distribución Z con desviación estándar poblacional conocida.
+  </p>
+
+  <label for="alpha">Nivel de significancia (α):</label>
+  <input type="number" id="alpha" min="0.001" max="0.2" step="0.001" value="0.05" required />
+  <small class="help-text">Ejemplo: 0.05, 0.01, 0.10</small>
+
+  <label for="test-type">Tipo de prueba:</label>
+  <select id="test-type" required>
+    <option value="left">Una cola izquierda (H₁: μ &lt; μ₀)</option>
+    <option value="right">Una cola derecha (H₁: μ &gt; μ₀)</option>
+    <option value="two">Dos colas (H₁: μ ≠ μ₀)</option>
+  </select>
+
+  <label for="media-poblacional">Media poblacional (μ₀):</label>
+  <input type="number" id="media-poblacional" step="0.0001" required />
+
+  <label for="media-muestral">Media muestral (x̄):</label>
+  <input type="number" id="media-muestral" step="0.0001" required />
+
+  <label for="desviacion-poblacional">Desviación estándar poblacional (σ):</label>
+  <input type="number" id="desviacion-poblacional" step="0.0001" min="0" required />
+
+  <label for="n">Tamaño de muestra (n):</label>
+  <input type="number" id="n" min="1" step="1" required />
+
+  <button id="calcularBtn">Calcular</button>
+  <button id="limpiarBtn" type="button">Limpiar</button>
+  <button id="btnRegresar" style="margin-top:15px; width: 100%; padding: 12px; font-size: 1.1rem; font-weight: 700; color: white; background-color: #1E90FF; border: none; border-radius: 10px; cursor: pointer;">
+  Regresar
+</button>
+
+  <div id="result" class="result"></div>
+
+  <div class="graph-container">
+    <canvas id="chart"></canvas>
+  </div>
+</div>
+
+<script>
+const alphaInput = document.getElementById('alpha');
+const testType = document.getElementById('test-type');
+const mediaPoblacionalInput = document.getElementById('media-poblacional');
+const mediaMuestralInput = document.getElementById('media-muestral');
+const desviacionPoblacionalInput = document.getElementById('desviacion-poblacional');
+const nInput = document.getElementById('n');
+const calcularBtn = document.getElementById('calcularBtn');
+const limpiarBtn = document.getElementById('limpiarBtn');
+const resultDiv = document.getElementById('result');
+const ctx = document.getElementById('chart').getContext('2d');
+let chart = null;
+
+function calcPvalue(z, tail) {
+  if(tail === 'left') return jStat.normal.cdf(z, 0, 1);
+  if(tail === 'right') return 1 - jStat.normal.cdf(z, 0, 1);
+  return 2 * Math.min(jStat.normal.cdf(z, 0, 1), 1 - jStat.normal.cdf(z, 0, 1));
+}
+
+function getCriticalValues(alpha, tail){
+  if(tail === 'left') return [jStat.normal.inv(alpha,0,1)];
+  if(tail === 'right') return [jStat.normal.inv(1-alpha,0,1)];
+  let cv1 = jStat.normal.inv(alpha/2,0,1);
+  let cv2 = jStat.normal.inv(1-alpha/2,0,1);
+  return [cv1, cv2];
+}
+
+function calcular() {
+  const alpha = parseFloat(alphaInput.value);
+  const tail = testType.value;
+  const mu0 = parseFloat(mediaPoblacionalInput.value);
+  const xbar = parseFloat(mediaMuestralInput.value);
+  const sigma = parseFloat(desviacionPoblacionalInput.value);
+  const n = parseInt(nInput.value);
+
+  if(isNaN(alpha) || alpha <= 0 || alpha >= 1){
+    alert('Nivel de significancia inválido');
+    return;
+  }
+  if(isNaN(mu0) || isNaN(xbar) || isNaN(sigma) || isNaN(n) || n<=0 || sigma<=0){
+    alert('Por favor completa todos los campos correctamente.');
+    return;
+  }
+
+  const se = sigma / Math.sqrt(n);
+  const z = (xbar - mu0) / se;
+  const pvalue = calcPvalue(z, tail);
+  const cv = getCriticalValues(alpha, tail);
+
+  let reject = false;
+  if(tail === 'left'){
+    reject = z <= cv[0];
+  } else if(tail === 'right'){
+    reject = z >= cv[0];
+  } else {
+    reject = z <= cv[0] || z >= cv[1];
+  }
+
+  let conclusion = reject ? 
+    "Rechazamos la hipótesis nula H₀." : 
+    "No rechazamos la hipótesis nula H₀.";
+
+  let textoResultado = 
+`Resultados:
+- Estadístico Z: ${z.toFixed(4)}
+- Valor p: ${pvalue.toFixed(6)}
+- Nivel de significancia (α): ${alpha}
+- Valor(es) crítico(s): ${cv.map(v => v.toFixed(4)).join(', ')}
+- Tamaño muestra (n): ${n}
+- Error estándar (SE): ${se.toFixed(4)}
+  
+${conclusion}`;
+
+  resultDiv.textContent = textoResultado;
+
+
+  graficar(z, cv, alpha, tail);
+}
+
+function graficar(z, cv, alpha, tail){
+  const minX = -4;
+  const maxX = 4;
+  const step = 0.01;
+  let xValues = [];
+  let yValues = [];
+
+  for(let x = minX; x <= maxX; x += step){
+    xValues.push(x);
+    yValues.push(jStat.normal.pdf(x, 0, 1));
+  }
+
+  function getFillAreas(){
+    const areas = [];
+    if(tail === 'left'){
+      areas.push({from: minX, to: cv[0], color: 'rgba(255, 99, 132, 0.5)'});
+    } else if(tail === 'right'){
+      areas.push({from: cv[0], to: maxX, color: 'rgba(255, 99, 132, 0.5)'});
+    } else {
+      areas.push({from: minX, to: cv[0], color: 'rgba(255, 99, 132, 0.5)'});
+      areas.push({from: cv[1], to: maxX, color: 'rgba(255, 99, 132, 0.5)'});
+    }
+    return areas;
+  }
+
+
+  function getPvalueArea(){
+    if(tail === 'left'){
+      return {from: minX, to: z, color: 'rgba(54, 162, 235, 0.5)'};
+    } else if(tail === 'right'){
+      return {from: z, to: maxX, color: 'rgba(54, 162, 235, 0.5)'};
+    } else {
+      if(z < 0) return {from: minX, to: z, color: 'rgba(54, 162, 235, 0.5)'};
+      else return {from: z, to: maxX, color: 'rgba(54, 162, 235, 0.5)'};
+    }
+  }
+
+  
+  const fillAreas = getFillAreas();
+  const pArea = getPvalueArea();
+
+  if(chart){
+    chart.destroy();
+  }
+
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: xValues,
+      datasets: [
+        {
+          label: 'Distribución Z (normal estándar)',
+          data: yValues,
+          borderColor: '#1E90FF',
+          borderWidth: 2,
+          fill: false,
+          pointRadius: 0,
+          tension: 0.1
+        },
+        ...fillAreas.map(area => ({
+          type: 'line',
+          data: xValues.map(x => (x >= area.from && x <= area.to) ? jStat.normal.pdf(x, 0, 1) : NaN),
+          borderWidth: 0,
+          backgroundColor: area.color,
+          fill: true,
+          pointRadius: 0,
+          tension: 0.1,
+          label: 'Región crítica',
+          order: 1
+        })),
+        {
+          type: 'line',
+          data: xValues.map(x => (x >= pArea.from && x <= pArea.to) ? jStat.normal.pdf(x, 0, 1) : NaN),
+          borderWidth: 0,
+          backgroundColor: pArea.color,
+          fill: true,
+          pointRadius: 0,
+          tension: 0.1,
+          label: 'Área p-valor',
+          order: 2
+        },
+        {
+          label: 'Estadístico Z',
+          data: xValues.map(x => (Math.abs(x - z) < 0.01) ? jStat.normal.pdf(z,0,1) : NaN),
+          type: 'scatter',
+          backgroundColor: '#ffff00',
+          pointRadius: 6,
+          order: 3
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      animation: false,
+      scales: {
+        x: {
+          title: {
+            display: true,
+            text: 'Z',
+            color: 'white',
+            font: {size: 16, weight: 'bold'}
+          },
+          grid: {color: '#444'},
+          ticks: {color: 'white'}
+        },
+        y: {
+          title: {
+            display: true,
+            text: 'Densidad de probabilidad',
+            color: 'white',
+            font: {size: 16, weight: 'bold'}
+          },
+          grid: {color: '#444'},
+          ticks: {color: 'white'}
+        }
+      },
+      plugins: {
+        legend: {
+          labels: {color: 'white'}
+        },
+        tooltip: {enabled: false}
+      }
+    }
+  });
+}
+
+calcularBtn.addEventListener('click', calcular);
+limpiarBtn.addEventListener('click', () => {
+  alphaInput.value = '0.05';
+  testType.value = 'two';
+  mediaPoblacionalInput.value = '';
+  mediaMuestralInput.value = '';
+  desviacionPoblacionalInput.value = '';
+  nInput.value = '';
+  resultDiv.textContent = '';
+  if(chart){
+    chart.destroy();
+  }
+});
+
+document.getElementById('btnRegresar').addEventListener('click', () => {
+  window.location.href = 'modulo3.html'; 
+});
+</script>
+
+</body>
+</html>

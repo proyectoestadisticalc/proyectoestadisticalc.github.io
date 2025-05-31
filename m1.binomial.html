@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Calculadora Binomial</title>
+  <style>
+    :root {
+      --rojo: #c40000;
+      --gris: #ccc;
+    }
+
+    body, html {
+      height: 100%;
+      margin: 0;
+      background-color: #111;
+      color: white;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+    }
+
+    main {
+      max-width: 700px;
+      width: 100%;
+      background-color: #222;
+      padding: 2.5rem;
+      border-radius: 10px;
+      box-shadow: 0 0 15px var(--rojo);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    header {
+      text-align: center;
+      width: 100%;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 2rem;
+      color: var(--rojo);
+      text-shadow: 1px 1px 0 #000;
+    }
+
+    .descripcion {
+      font-size: 1rem;
+      color: var(--gris);
+      font-style: italic;
+      line-height: 1.5;
+      text-align: center;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      width: 100%;
+    }
+
+    label {
+      font-weight: bold;
+    }
+
+    input, select {
+      padding: 0.8rem;
+      background-color: #333;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 1rem;
+      width: 100%;
+    }
+
+    .condicional-group {
+      display: flex;
+      gap: 1.5rem;
+      margin-top: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .condicional-group > div {
+      display: flex;
+      flex-direction: column;
+      flex: 1 1 150px; /* ancho mínimo y que crezca igual */
+    }
+
+    button {
+      padding: 0.8rem;
+      background-color: var(--rojo);
+      color: white;
+      font-size: 1rem;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #ff1a1a;
+    }
+
+    .botones {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+    }
+
+    table {
+      width: 100%;
+      margin-top: 1rem;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      border: 1px solid #444;
+      padding: 0.5rem;
+      text-align: center;
+    }
+
+    th {
+      background-color: #333;
+    }
+
+    #resultado {
+      width: 100%;
+    }
+
+    @media (max-width: 600px) {
+      main {
+        padding: 1.5rem;
+      }
+      .condicional-group {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Calculadora Binomial</h1>
+      <p class="descripcion">
+        Ingresa los valores de "n" y "p" para calcular la distribución binomial y probabilidades condicionales.
+      </p>
+    </header>
+
+    <form id="binomialForm">
+      <label for="n">Número de ensayos (n):</label>
+      <input type="number" id="n" min="0" value="10" required />
+
+      <label for="p">Probabilidad de éxito (p):</label>
+      <input type="number" id="p" step="0.01" min="0" max="1" value="0.5" required />
+
+      <label for="condicion">Tipo de probabilidad:</label>
+      <select id="condicion">
+        <option value="tabla">Mostrar tabla completa</option>
+        <option value="igual">P(X = k)</option>
+        <option value="menor">P(X ≤ k)</option>
+        <option value="mayor">P(X ≥ k)</option>
+        <option value="rango">P(a ≤ X ≤ b)</option>
+      </select>
+
+      <div id="condicionales" class="condicional-group">
+        <div>
+          <label for="k">Valor k:</label>
+          <input type="number" id="k" min="0" value="5" />
+        </div>
+        <div>
+          <label for="a">Valor a (mín):</label>
+          <input type="number" id="a" min="0" value="3" />
+        </div>
+        <div>
+          <label for="b">Valor b (máx):</label>
+          <input type="number" id="b" min="0" value="7" />
+        </div>
+      </div>
+
+      <button type="submit">Calcular</button>
+    </form>
+
+    <div class="botones">
+      <button id="btnLimpiar" type="button">Limpiar</button>
+      <button id="btnRegresar" type="button">Regresar</button>
+    </div>
+
+    <div id="resultado"></div>
+  </main>
+
+  <script>
+    const form = document.getElementById('binomialForm');
+    const resultado = document.getElementById('resultado');
+    const condicion = document.getElementById('condicion');
+    const kInput = document.getElementById('k');
+    const aInput = document.getElementById('a');
+    const bInput = document.getElementById('b');
+
+    function factorial(num) {
+      let res = 1;
+      for (let i = 2; i <= num; i++) res *= i;
+      return res;
+    }
+
+    function binomial(n, k, p) {
+      const comb = factorial(n) / (factorial(k) * factorial(n - k));
+      return comb * Math.pow(p, k) * Math.pow(1 - p, n - k);
+    }
+
+    condicion.addEventListener('change', () => {
+      const mostrarK = ['igual', 'menor', 'mayor'].includes(condicion.value);
+      const mostrarAB = condicion.value === 'rango';
+
+      // Los 3 divs hijos dentro condicional-group
+      const divs = document.querySelectorAll('.condicional-group > div');
+
+      divs[0].style.display = mostrarK ? 'flex' : 'none';  // k
+      divs[1].style.display = mostrarAB ? 'flex' : 'none'; // a
+      divs[2].style.display = mostrarAB ? 'flex' : 'none'; // b
+    });
+
+    // Ejecutar al cargar para mostrar/ocultar inputs según opción por defecto
+    window.addEventListener('load', () => {
+      condicion.dispatchEvent(new Event('change'));
+    });
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const n = parseInt(document.getElementById('n').value);
+      const p = parseFloat(document.getElementById('p').value);
+
+      if (isNaN(n) || isNaN(p) || p < 0 || p > 1 || n < 0) {
+        resultado.innerHTML = '<p style="color: red">Entrada inválida.</p>';
+        return;
+      }
+
+      const tipo = condicion.value;
+      const k = parseInt(kInput.value);
+      const a = parseInt(aInput.value);
+      const b = parseInt(bInput.value);
+
+      let output = '';
+
+      if (tipo === 'tabla') {
+        output += `<table><thead><tr><th>k</th><th>P(X = k)</th></tr></thead><tbody>`;
+        for (let i = 0; i <= n; i++) {
+          output += `<tr><td>${i}</td><td>${binomial(n, i, p).toFixed(6)}</td></tr>`;
+        }
+        output += '</tbody></table>';
+      } else if (tipo === 'igual') {
+        output = `P(X = ${k}) = ${binomial(n, k, p).toFixed(6)}`;
+      } else if (tipo === 'menor') {
+        let prob = 0;
+        for (let i = 0; i <= k; i++) prob += binomial(n, i, p);
+        output = `P(X ≤ ${k}) = ${prob.toFixed(6)}`;
+      } else if (tipo === 'mayor') {
+        let prob = 0;
+        for (let i = k; i <= n; i++) prob += binomial(n, i, p);
+        output = `P(X ≥ ${k}) = ${prob.toFixed(6)}`;
+      } else if (tipo === 'rango') {
+        let prob = 0;
+        for (let i = a; i <= b; i++) prob += binomial(n, i, p);
+        output = `P(${a} ≤ X ≤ ${b}) = ${prob.toFixed(6)}`;
+      }
+
+      resultado.innerHTML = output;
+    });
+
+    document.getElementById('btnLimpiar').addEventListener('click', () => {
+      document.getElementById('n').value = '';
+      document.getElementById('p').value = '';
+      document.getElementById('k').value = '';
+      document.getElementById('a').value = '';
+      document.getElementById('b').value = '';
+      resultado.innerHTML = '';
+    });
+
+    document.getElementById('btnRegresar').addEventListener('click', () => {
+      window.location.href = 'modulo1.html';
+    });
+  </script>
+</body>
+</html>

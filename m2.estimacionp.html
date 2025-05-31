@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Estimaciones Puntuales</title>
+<style>
+  
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #000000; 
+  margin: 0; padding: 20px;
+  color: white; 
+}
+h1 {
+  text-align: center;
+  color: #00cc44; 
+  margin-bottom: 5px;
+}
+.container {
+  max-width: 600px;
+  background: #111; 
+  margin: 20px auto;
+  padding: 25px 30px;
+  box-shadow: 0 2px 10px rgba(0,255,0,0.2);
+  border-radius: 8px;
+  color: white; 
+}
+label {
+  display: block;
+  margin-top: 15px;
+  font-weight: 600;
+  color: white; 
+}
+select, input[type=number], textarea {
+  width: 100%;
+  margin-top: 6px;
+  padding: 8px 10px;
+  font-size: 1rem;
+  border: 1.8px solid #00cc44; 
+  border-radius: 6px;
+  background: #222; 
+  color: white; 
+  transition: border-color 0.25s ease;
+}
+select:focus, input[type=number]:focus, textarea:focus {
+  border-color: #00cc44;
+  outline: none;
+  background: #333;
+  color: white; 
+}
+.help-text {
+  font-size: 0.85rem;
+  color: #66cc66;
+  margin-top: 3px;
+}
+.error {
+  color: #cc4444;
+  font-weight: 700;
+  margin-top: 10px;
+}
+.result {
+  margin-top: 30px;
+  padding: 20px;
+  background: #111;
+  border-radius: 8px;
+  border: 1px solid #00cc44;
+  color: white; 
+}
+
+.formula {
+  font-family: 'Courier New', Courier, monospace;
+  background: #002200;
+  padding: 10px;
+  border-radius: 5px;
+  margin-top: 10px;
+  user-select: all;
+  color: #00cc44;
+}
+.copy-btn {
+  margin-left: 10px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  color: #00cc44;
+  text-decoration: underline;
+  background: none;
+  border: none;
+}
+.graph-container {
+  margin-top: 25px;
+  text-align: center;
+}
+svg {
+  max-width: 100%;
+  height: 60px;
+}
+
+/* Botón Calcular */
+button#calcularBtn {
+  margin-top: 25px;
+  width: 100%;
+  padding: 12px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff; 
+  background-color: #00cc44; 
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+button#calcularBtn:hover {
+  background-color: #009933; 
+  color: #fff;
+}
+
+/* Contenedor para Limpiar y Regresar en fila */
+.buttons-row {
+  display: flex;
+  gap: 15px;
+  margin-top: 10px;
+}
+
+/* Botones Limpiar y Regresar con mismo estilo verde */
+button#limpiarBtn,
+button#regresarBtn {
+  flex: 1;
+  padding: 12px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff; 
+  background-color: #00cc44; 
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+button#limpiarBtn:hover,
+button#regresarBtn:hover {
+  background-color: #009933; 
+  color: #fff;
+}
+
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Estimaciones Puntuales</h1>
+  <p style="text-align:center; color:#88cc88;">Calcula la estimación puntual de media, proporción o varianza con explicación y gráfico.</p>
+
+  <label for="tipoEstimacion">Selecciona el tipo de estimación:</label>
+  <select id="tipoEstimacion">
+    <option value="media">Media poblacional (μ)</option>
+    <option value="proporcion">Proporción poblacional (p)</option>
+    <option value="varianza">Varianza poblacional (σ²)</option>
+  </select>
+
+  <div id="inputsMedia" class="input-group">
+    <label for="mediaMuestral">Media muestral (x̄):</label>
+    <input type="number" id="mediaMuestral" step="any" placeholder="Ejemplo: 45.2" />
+    
+    <label for="tamanoMuestraMedia">Tamaño de la muestra (n):</label>
+    <input type="number" id="tamanoMuestraMedia" min="1" placeholder="Ejemplo: 50" />
+    
+    <label for="datosBrutosMedia">O ingresa datos en bruto separados por comas:</label>
+    <textarea id="datosBrutosMedia" placeholder="Ejemplo: 43, 46, 48, 44, 47"></textarea>
+    <small class="help-text">Si ingresas datos, se ignorarán los campos anteriores.</small>
+  </div>
+
+  <div id="inputsProporcion" class="input-group" style="display:none;">
+    <label for="exitos">Número de éxitos (x):</label>
+    <input type="number" id="exitos" min="0" placeholder="Ejemplo: 30" />
+    
+    <label for="tamanoMuestraProporcion">Tamaño de la muestra (n):</label>
+    <input type="number" id="tamanoMuestraProporcion" min="1" placeholder="Ejemplo: 50" />
+    
+    <label for="datosBrutosProporcion">O ingresa datos en bruto (0 y 1) separados por comas:</label>
+    <textarea id="datosBrutosProporcion" placeholder="Ejemplo: 1,0,1,1,0,1,1"></textarea>
+    <small class="help-text">Si ingresas datos, se ignorarán los campos anteriores.</small>
+  </div>
+
+  <div id="inputsVarianza" class="input-group" style="display:none;">
+    <label for="varianzaMuestral">Varianza muestral (s²):</label>
+    <input type="number" id="varianzaMuestral" step="any" min="0" placeholder="Ejemplo: 12.3" />
+    
+    <label for="tamanoMuestraVarianza">Tamaño de la muestra (n):</label>
+    <input type="number" id="tamanoMuestraVarianza" min="1" placeholder="Ejemplo: 50" />
+    
+    <label for="datosBrutosVarianza">O ingresa datos en bruto separados por comas:</label>
+    <textarea id="datosBrutosVarianza" placeholder="Ejemplo: 43, 46, 48, 44, 47"></textarea>
+    <small class="help-text">Si ingresas datos, se ignorarán los campos anteriores.</small>
+  </div>
+
+  <button id="calcularBtn">Calcular estimación puntual</button>
+
+  <div class="buttons-row">
+    <button id="limpiarBtn">Limpiar</button>
+    <button id="regresarBtn">Regresar</button>
+  </div>
+
+  <div id="errorMsg" class="error"></div>
+
+  <div id="resultado" class="result" style="display:none;">
+    <h2>Resultado:</h2>
+    <p id="estimacionPuntual"></p>
+    <div id="formulaContainer" class="formula"></div>
+    <div class="graph-container">
+      <svg id="grafico" viewBox="0 0 600 60" aria-label="Visualización gráfica de estimación puntual"></svg>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Referencias DOM
+  const tipoEstimacion = document.getElementById('tipoEstimacion');
+  const inputsMedia = document.getElementById('inputsMedia');
+  const inputsProporcion = document.getElementById('inputsProporcion');
+  const inputsVarianza = document.getElementById('inputsVarianza');
+
+  const calcularBtn = document.getElementById('calcularBtn');
+  const limpiarBtn = document.getElementById('limpiarBtn');
+  const regresarBtn = document.getElementById('regresarBtn');
+
+  const errorMsg = document.getElementById('errorMsg');
+  const resultado = document.getElementById('resultado');
+  const estimacionPuntual = document.getElementById('estimacionPuntual');
+  const formulaContainer = document.getElementById('formulaContainer');
+  const grafico = document.getElementById('grafico');
+
+  // Cambio de inputs según tipo de estimación
+  tipoEstimacion.addEventListener('change', () => {
+    errorMsg.textContent = '';
+    resultado.style.display = 'none';
+
+    inputsMedia.style.display = 'none';
+    inputsProporcion.style.display = 'none';
+    inputsVarianza.style.display = 'none';
+
+    if (tipoEstimacion.value === 'media') {
+      inputsMedia.style.display = 'block';
+    } else if (tipoEstimacion.value === 'proporcion') {
+      inputsProporcion.style.display = 'block';
+    } else if (tipoEstimacion.value === 'varianza') {
+      inputsVarianza.style.display = 'block';
+    }
+  });
+
+  // Funciones auxiliares para parsear datos en bruto
+  function parseDatos(datos) {
+    return datos.split(',')
+      .map(d => d.trim())
+      .filter(d => d !== '')
+      .map(Number)
+      .filter(n => !isNaN(n));
+  }
+
+  // Función para calcular media de array numérico
+  function calcularMedia(arr) {
+    if (arr.length === 0) return NaN;
+    return arr.reduce((a,b) => a + b, 0) / arr.length;
+  }
+
+  // Función para calcular varianza de array numérico (muestral)
+  function calcularVarianza(arr) {
+    if (arr.length < 2) return NaN;
+    const m = calcularMedia(arr);
+    const sumaCuadrados = arr.reduce((acc, val) => acc + (val - m) ** 2, 0);
+    return sumaCuadrados / (arr.length - 1);
+  }
+
+  // Función para graficar la estimación puntual como barra proporcional
+  function graficarEstimacion(valor, maxVal = null) {
+    grafico.innerHTML = '';
+    if (maxVal === null) maxVal = valor * 1.3; // Un poco más para margen
+
+    const width = 600;
+    const height = 60;
+    const padding = 20;
+
+    const valorEscalado = Math.min(valor / maxVal, 1) * (width - 2 * padding);
+
+    // Fondo barra
+    const fondo = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    fondo.setAttribute("x", padding);
+    fondo.setAttribute("y", height/3);
+    fondo.setAttribute("width", width - 2*padding);
+    fondo.setAttribute("height", height/3);
+    fondo.setAttribute("fill", "#003300");
+    grafico.appendChild(fondo);
+
+    // Barra estimación
+    const barra = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    barra.setAttribute("x", padding);
+    barra.setAttribute("y", height/3);
+    barra.setAttribute("width", valorEscalado);
+    barra.setAttribute("height", height/3);
+    barra.setAttribute("fill", "#00cc44");
+    grafico.appendChild(barra);
+
+    // Texto valor
+    const texto = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    texto.setAttribute("x", padding + valorEscalado + 5);
+    texto.setAttribute("y", height/2 + 5);
+    texto.setAttribute("fill", "#00cc44");
+    texto.setAttribute("font-weight", "700");
+    texto.textContent = valor.toFixed(4);
+    grafico.appendChild(texto);
+  }
+
+  // Copiar fórmula al portapapeles
+  function copiarFormula() {
+    navigator.clipboard.writeText(formulaContainer.textContent)
+      .then(() => alert('Fórmula copiada al portapapeles'))
+      .catch(() => alert('No se pudo copiar la fórmula'));
+  }
+
+  // Calcular y mostrar resultados
+  calcularBtn.addEventListener('click', () => {
+    errorMsg.textContent = '';
+    resultado.style.display = 'none';
+    formulaContainer.innerHTML = '';
+    estimacionPuntual.textContent = '';
+    grafico.innerHTML = '';
+
+    let estimacion, formula, valorMaximoGrafico;
+
+    if (tipoEstimacion.value === 'media') {
+      const datosBrutos = document.getElementById('datosBrutosMedia').value.trim();
+      let datos = [];
+      if (datosBrutos.length > 0) {
+        datos = parseDatos(datosBrutos);
+        if (datos.length === 0) {
+          errorMsg.textContent = 'Datos en bruto inválidos o vacíos.';
+          return;
+        }
+        estimacion = calcularMedia(datos);
+      } else {
+        const xbarra = parseFloat(document.getElementById('mediaMuestral').value);
+        const n = parseInt(document.getElementById('tamanoMuestraMedia').value);
+        if (isNaN(xbarra) || isNaN(n) || n <= 0) {
+          errorMsg.textContent = 'Por favor, ingresa la media muestral y un tamaño de muestra válido.';
+          return;
+        }
+        estimacion = xbarra;
+      }
+      formula = 'Estimación puntual de la media poblacional (μ) es la media muestral (x̄).';
+      valorMaximoGrafico = estimacion * 1.3 + 10;
+    } 
+    else if (tipoEstimacion.value === 'proporcion') {
+      const datosBrutos = document.getElementById('datosBrutosProporcion').value.trim();
+      let datos = [];
+      if (datosBrutos.length > 0) {
+        datos = parseDatos(datosBrutos);
+        if (datos.length === 0 || !datos.every(v => v === 0 || v === 1)) {
+          errorMsg.textContent = 'Datos en bruto inválidos para proporción (solo 0 y 1).';
+          return;
+        }
+        const suma = datos.reduce((a,b) => a + b, 0);
+        estimacion = suma / datos.length;
+      } else {
+        const x = parseInt(document.getElementById('exitos').value);
+        const n = parseInt(document.getElementById('tamanoMuestraProporcion').value);
+        if (isNaN(x) || isNaN(n) || n <= 0 || x < 0 || x > n) {
+          errorMsg.textContent = 'Por favor, ingresa número de éxitos y tamaño de muestra válidos.';
+          return;
+        }
+        estimacion = x / n;
+      }
+      formula = 'Estimación puntual de la proporción poblacional (p) es la proporción muestral (x/n).';
+      valorMaximoGrafico = 1;
+    }
+    else if (tipoEstimacion.value === 'varianza') {
+      const datosBrutos = document.getElementById('datosBrutosVarianza').value.trim();
+      let datos = [];
+      if (datosBrutos.length > 0) {
+        datos = parseDatos(datosBrutos);
+        if (datos.length < 2) {
+          errorMsg.textContent = 'Se necesitan al menos 2 datos para calcular varianza.';
+          return;
+        }
+        estimacion = calcularVarianza(datos);
+      } else {
+        const s2 = parseFloat(document.getElementById('varianzaMuestral').value);
+        const n = parseInt(document.getElementById('tamanoMuestraVarianza').value);
+        if (isNaN(s2) || s2 < 0 || isNaN(n) || n <= 0) {
+          errorMsg.textContent = 'Por favor, ingresa varianza muestral y tamaño de muestra válidos.';
+          return;
+        }
+        estimacion = s2;
+      }
+      formula = 'Estimación puntual de la varianza poblacional (σ²) es la varianza muestral (s²).';
+      valorMaximoGrafico = estimacion * 1.3 + 5;
+    } else {
+      errorMsg.textContent = 'Tipo de estimación no válido.';
+      return;
+    }
+
+    estimacionPuntual.textContent = `La estimación puntual es: ${estimacion.toFixed(4)}`;
+    formulaContainer.textContent = formula + '  ';
+    
+    const copiarBtn = document.createElement('button');
+    copiarBtn.textContent = 'Copiar fórmula';
+    copiarBtn.className = 'copy-btn';
+    copiarBtn.type = 'button';
+    copiarBtn.onclick = copiarFormula;
+    formulaContainer.appendChild(copiarBtn);
+
+    resultado.style.display = 'block';
+
+    graficarEstimacion(estimacion, valorMaximoGrafico);
+  });
+
+  limpiarBtn.addEventListener('click', () => {
+    errorMsg.textContent = '';
+    resultado.style.display = 'none';
+    formulaContainer.innerHTML = '';
+    estimacionPuntual.textContent = '';
+    grafico.innerHTML = '';
+
+    document.querySelectorAll('input[type="number"], textarea').forEach(el => el.value = '');
+
+    tipoEstimacion.value = 'media';
+    tipoEstimacion.dispatchEvent(new Event('change'));
+  });
+
+  regresarBtn.addEventListener('click', () => {
+    window.location.href = 'modulo2.html';
+  });
+
+  tipoEstimacion.dispatchEvent(new Event('change'));
+</script>
+
+</body>
+</html>

@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Variable Aleatoria Discreta</title>
+  <style>
+    :root {
+      --rojo: #c40000;
+      --rojo-hover: #ff1a1a;
+      --fondo: #111;
+      --panel: #1b1b1b;
+      --texto: #eee;
+      --gris: #aaa;
+      --borde: #333;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background-color: var(--fondo);
+      font-family: 'Segoe UI', sans-serif;
+      color: var(--texto);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    main {
+      width: 95%;
+      max-width: 1200px;
+      background-color: var(--panel);
+      padding: 3rem;
+      border-radius: 16px;
+      box-shadow: 0 0 20px rgba(255, 0, 0, 0.25);
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+      animation: fadeIn 0.4s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+header h1 {
+  margin: 0;
+  font-size: 2rem; /* más pequeño */
+  color: var(--rojo);
+  text-align: center;
+}
+.descripcion {
+  margin-top: 0.5rem;
+  font-size: 1rem;
+  text-align: center;
+  color: var(--gris);
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.5;
+}
+
+
+    .formulario {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    @media (min-width: 768px) {
+      .formulario {
+        flex-direction: row;
+        gap: 2rem;
+      }
+    }
+
+    .form-group {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    label {
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+      color: var(--gris);
+    }
+
+    input[type="text"] {
+      padding: 1rem;
+      font-size: 1.1rem;
+      border: none;
+      border-radius: 8px;
+      background-color: #2a2a2a;
+      color: white;
+    }
+
+ .botones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem; /* antes: 1rem */
+  justify-content: center; /* antes: space-between */
+  width: 100%;
+}
+    button {
+      background-color: var(--rojo);
+      color: white;
+      border: none;
+      padding: 1rem 2rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: 0.3s ease;
+    }
+
+    button:hover {
+      background-color: var(--rojo-hover);
+    }
+
+    #resultado {
+      background-color: #111;
+      padding: 1.5rem;
+      border-radius: 12px;
+      font-size: 1.1rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+      font-size: 1rem;
+    }
+
+    th, td {
+      padding: 0.75rem;
+      border: 1px solid var(--borde);
+      text-align: center;
+    }
+
+    th {
+      background-color: var(--rojo);
+      color: white;
+    }
+
+    caption {
+      font-size: 1.1rem;
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+      color: var(--gris);
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Variable Aleatoria Discreta</h1>
+      <p class="descripcion">
+        Ingresa los valores de una variable aleatoria discreta y sus probabilidades para calcular la distribución, el valor esperado, la varianza y la desviación estándar.
+    </p>
+    </header>
+    <form id="formulario" class="formulario">
+      <div class="form-group">
+        <label for="valores">Valores (X)</label>
+        <input type="text" id="valores" placeholder="Ej: 0, 1, 2, 3" required />
+      </div>
+
+      <div class="form-group">
+        <label for="probabilidades">Probabilidades P(X)</label>
+        <input type="text" id="probabilidades" placeholder="Ej: 0.1, 0.3, 0.4, 0.2" required />
+      </div>
+    </form>
+
+    <div class="botones">
+      <button type="button" onclick="calcular()">Calcular</button>
+      <button type="button" onclick="limpiar()">Limpiar</button>
+      <button type="button" onclick="window.location.href='modulo1.html'">Regresar</button>
+    </div>
+
+    <div id="resultado"></div>
+  </main>
+
+  <script>
+    function calcular() {
+      const x = document.getElementById('valores').value.split(',').map(v => parseFloat(v.trim()));
+      const p = document.getElementById('probabilidades').value.split(',').map(v => parseFloat(v.trim()));
+      const resultado = document.getElementById('resultado');
+
+      if (x.length !== p.length) {
+        resultado.innerHTML = "⚠️ La cantidad de valores y probabilidades debe coincidir.";
+        return;
+      }
+
+      if (p.some(prob => isNaN(prob) || prob < 0 || prob > 1) || x.some(val => isNaN(val))) {
+        resultado.innerHTML = "⚠️ Ingresa solo números válidos en ambos campos.";
+        return;
+      }
+
+      const sumaP = p.reduce((acc, val) => acc + val, 0);
+      if (Math.abs(sumaP - 1) > 0.01) {
+        resultado.innerHTML = "⚠️ Las probabilidades deben sumar aproximadamente 1.";
+        return;
+      }
+
+      const ex = x.reduce((acc, val, i) => acc + val * p[i], 0);
+      let varianza = 0;
+
+      let tabla = `
+        <table>
+          <caption>Distribución de Probabilidades</caption>
+          <thead>
+            <tr><th>X</th><th>P(X)</th><th>X · P(X)</th><th>(X - E(X))² · P(X)</th></tr>
+          </thead>
+          <tbody>
+      `;
+
+      for (let i = 0; i < x.length; i++) {
+        const xi = x[i];
+        const pi = p[i];
+        const xpi = xi * pi;
+        const varTerm = (xi - ex) ** 2 * pi;
+        varianza += varTerm;
+
+        tabla += `
+          <tr>
+            <td>${xi}</td>
+            <td>${pi}</td>
+            <td>${xpi.toFixed(3)}</td>
+            <td>${varTerm.toFixed(3)}</td>
+          </tr>
+        `;
+      }
+
+      tabla += `</tbody></table>`;
+      const desviacion = Math.sqrt(varianza);
+
+      resultado.innerHTML = `
+        ${tabla}
+        <p><strong>Valor Esperado (E[X]):</strong> ${ex.toFixed(3)}</p>
+        <p><strong>Varianza:</strong> ${varianza.toFixed(3)}</p>
+        <p><strong>Desviación Estándar:</strong> ${desviacion.toFixed(3)}</p>
+      `;
+    }
+
+    function limpiar() {
+      document.getElementById('valores').value = '';
+      document.getElementById('probabilidades').value = '';
+      document.getElementById('resultado').innerHTML = '';
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PROYECTO ESTADÍSTICA</title>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #111;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    header {
+      background-color: #c40000;
+      padding: 2rem;
+      text-align: center;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+    }
+
+    header h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 1px;
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 2rem 1rem;
+      text-align: center;
+    }
+
+    main p {
+      font-size: 1.1rem;
+      max-width: 700px;
+      margin-bottom: 2rem;
+      color: #ccc;
+    }
+
+    .grafico-container {
+      width: 100%;
+      max-width: 650px;
+      background-color: #222;
+      padding: 1rem;
+      border-radius: 10px;
+      margin-bottom: 2rem;
+    }
+
+    canvas {
+      background-color: #fff;
+      border-radius: 10px;
+    }
+
+    .botones {
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 3rem;
+    }
+
+    .botones button {
+      background-color: #c40000;
+      color: white;
+      border: none;
+      padding: 1rem 2rem;
+      font-size: 1.2rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .botones button:hover {
+      background-color: #e60000;
+      transform: translateY(-2px);
+    }
+
+    footer {
+      background-color: #1a1a1a;
+      text-align: center;
+      padding: 1rem;
+      font-size: 0.85rem;
+      color: #aaa;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>ESTADÍSTICA II</h1>
+  </header>
+
+  <main>
+    <p>
+     Bienvenido a el programa de Estadística II.
+    </p>
+
+    <div class="grafico-container">
+      <canvas id="hipotesisChart" width="600" height="300"></canvas>
+    </div>
+    <p>
+       Selecciona el módulo de Estadística II que quieres repasar.
+    </p>
+    <div class="botones">
+      <button onclick="location.href='modulo1.html'">Módulo I</button>
+      <button onclick="location.href='modulo2.html'">Módulo II</button>
+      <button onclick="location.href='modulo3.html'">Módulo III</button>
+    </div>
+  </main>
+
+  <footer>
+    &copy; 2025 Proyecto Estadística - Todos los derechos reservados
+  </footer>
+
+  <script>
+    const ctx = document.getElementById('hipotesisChart').getContext('2d');
+
+    
+    function normal(x, mean = 0, sd = 1) {
+      return (1 / (sd * Math.sqrt(2 * Math.PI))) *
+             Math.exp(-0.5 * Math.pow((x - mean) / sd, 2));
+    }
+
+    
+    const labels = [], data = [];
+    for (let x = -4; x <= 4; x += 0.1) {
+      labels.push(x.toFixed(1));
+      data.push(normal(x));
+    }
+
+    
+    const chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Distribución Normal',
+            data: data,
+            borderColor: '#000',
+            borderWidth: 2,
+            fill: false,
+            pointRadius: 0,
+          },
+          {
+            label: 'Z crítico',
+            type: 'bar',
+            data: data.map((_, i) =>
+              (labels[i] < -1.96 || labels[i] > 1.96) ? normal(labels[i]) : 0
+            ),
+            backgroundColor: '#ff0000aa',
+          },
+          {
+            label: 'Z estadístico',
+            type: 'bar',
+            data: new Array(data.length).fill(0),
+            backgroundColor: '#007bffcc'
+          }
+        ]
+      },
+      options: {
+        animation: {
+          duration: 1000
+        },
+        plugins: {
+          legend: {
+            labels: { color: 'black' }
+          }
+        },
+        scales: {
+          x: {
+            title: { display: true, text: 'Z', color: 'black' },
+            ticks: { color: 'black' }
+          },
+          y: {
+            title: { display: true, text: 'Densidad', color: 'black' },
+            ticks: { color: 'black' }
+          }
+        }
+      }
+    });
+
+    
+    setInterval(() => {
+      const zEstadistico = (Math.random() * 6 - 3).toFixed(1); 
+      const nuevaData = chart.data.datasets[2].data.map((_, i) =>
+        parseFloat(labels[i]).toFixed(1) === zEstadistico ? normal(zEstadistico) : 0
+      );
+      chart.data.datasets[2].data = nuevaData;
+      chart.update();
+    }, 2000);
+  </script>
+
+</body>
+</html>

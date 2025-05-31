@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Módulo 3</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #111;
+      color: #eee;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    header {
+      background-color: 	#0A3D62;
+      padding: 2rem 1rem;
+      text-align: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    }
+
+    header h1 {
+      font-size: 2.75rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 1.2px;
+      user-select: none;
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+      max-width: 900px;
+      margin: 0 auto;
+      text-align: center;
+      gap: 2rem;
+    }
+
+    main p {
+      font-size: 1.2rem;
+      color: #ccc;
+      max-width: 700px;
+      margin-bottom: 1rem;
+    }
+
+    .botones {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); 
+      gap: 1.25rem;
+      width: 100%;
+      max-width: 900px;
+    }
+
+    .botones button {
+      background-color: #0A3D62;;
+      color: #fff;
+      border: none;
+      padding: 1rem 1rem; 
+      font-size: 1.1rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      transition: background-color 0.3s ease, transform 0.2s ease;
+      user-select: none;
+      width: 100%;
+      white-space: normal; 
+      line-height: 1.3;
+    }
+
+    .botones button:hover,
+    .botones button:focus {
+      background-color: 	#0A3D62;
+      transform: translateY(-3px);
+      outline: none;
+      box-shadow: 0 6px 16px rgb(10, 61, 98);
+    }
+
+    .botones:last-of-type {
+      max-width: 300px;
+      margin-top: 1rem;
+      justify-content: center;
+      display: flex;
+    }
+
+    footer {
+      background-color: #1a1a1a;
+      text-align: center;
+      padding: 1rem;
+      font-size: 0.9rem;
+      color: #aaa;
+      user-select: none;
+    }
+
+    @media (max-width: 480px) {
+      header h1 {
+        font-size: 2rem;
+      }
+
+      main p {
+        font-size: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Módulo 3</h1>
+  </header>
+
+  <main>
+    <p>Selecciona el tema del Módulo III que quieres calcular.</p>
+    <div class="botones" role="list">
+        <button role="listitem" onclick="location.href='m3.hipotesis.html'" aria-label="Ir a Tema 1">Prueba de hipótesis</button>
+        <button role="listitem" onclick="location.href='m3.hipotesisdesviacion.html'" aria-label="Ir a Tema 2">Prueba de hipótesis de medias cuando se conoce la desviación estándar de la población</button>
+        <button role="listitem" onclick="location.href='m3.potencia.html'" aria-label="Ir a Tema 3">Medición de la potencia de una prueba de hipótesis</button>
+        <button role="listitem" onclick="location.href='m3.muestrasgrandes.html'" aria-label="Ir a Tema 4">Prueba de hipótesis para proporciones para muestras grandes</button>
+        <button role="listitem" onclick="location.href='m3.hipotesismenosdesvia.html'" aria-label="Ir a Tema 5">Prueba de hipótesis  de medias cuando se desconoce la desviación estándar de la población</button>
+        <button role="listitem" onclick="location.href='m3.diferenciamediaspropo.html'" aria-label="Ir a Tema 6">prueba de hipótesis para diferencias entre medias y proporciones</button>
+        <button role="listitem" onclick="location.href='m3.diferenciasmuestrasg.html'" aria-label="Ir a Tema 7">Pruebas para diferencias entres medias para muestras grandes</button>
+        <button role="listitem" onclick="location.href='m3.diferenciasmuestrasp.html'" aria-label="Ir a Tema 8">Pruebas para diferencias entre medias para muestras pequeñas </button>
+        <button role="listitem" onclick="location.href='m3.muestrasdependientes.html'" aria-label="Ir a Tema 9">Prueba de diferencias entre medias con muestras dependientes</button>
+        <button role="listitem" onclick="location.href='m3.diferenciaspropog.html'" aria-label="Ir a Tema 10">Pruebas para diferencias entre proporciones para muestras grandes</button>
+        <button role="listitem" onclick="location.href='m3.valorp.html'" aria-label="Ir a Tema 11">Valor P</button>
+        <button role="listitem" onclick="location.href='m3.regresionlineal.html'" aria-label="Ir a Tema 12">Estimación mediante la recta de regresión</button>
+   </div>
+
+    <div class="botones" aria-label="Controles generales">
+      <button onclick="location.href='index.html'" aria-label="Regresar a la página principal">Regresar</button>
+    </div>
+  </main>
+
+  <footer>
+    &copy; 2025 Proyecto Estadística - Todos los derechos reservados
+  </footer>
+
+</body>
+</html>

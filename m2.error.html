@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Calculadora de Error Estándar</title>
+  <style>
+    :root {
+      --verde: #006400;
+      --gris: #ccc;
+      --fondo: #111;
+      --panel: #222;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: var(--fondo);
+      color: var(--gris);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    main {
+      background-color: var(--panel);
+      padding: 2rem;
+      border-radius: 12px;
+      max-width: 720px;
+      width: 100%;
+      box-shadow: 0 0 15px var(--verde);
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      align-items: center;
+    }
+    h1 {
+      color: var(--verde);
+      text-align: center;
+      font-size: 2.2rem;
+    }
+    .descripcion {
+      font-style: italic;
+      text-align: center;
+      font-size: 1rem;
+      color: var(--gris);
+    }
+    form {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    label {
+      font-weight: bold;
+      color: var(--gris);
+    }
+    input, select {
+      padding: 0.8rem;
+      border-radius: 6px;
+      border: none;
+      background-color: #333;
+      color: white;
+      font-size: 1rem;
+    }
+    input:focus, select:focus {
+      outline: none;
+      background-color: #444;
+    }
+    button {
+      padding: 0.9rem 1.5rem;
+      background-color: var(--verde);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      font-size: 1.1rem;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #008000;
+    }
+    .botones {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    #resultado {
+      margin-top: 1rem;
+      font-size: 1.05rem;
+      text-align: center;
+      color: white;
+    }
+    canvas {
+      margin-top: 1.5rem;
+      max-width: 100%;
+      border-radius: 8px;
+      background-color: #1a1a1a;
+      box-shadow: 0 0 8px var(--verde);
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Calculadora de Error Estándar</h1>
+    <p class="descripcion">Calcula el error estándar para una media o una proporción e interpreta el intervalo de confianza visualmente.</p>
+
+    <form id="formulario">
+      <label for="tipo">Tipo de cálculo:</label>
+      <select id="tipo" required>
+        <option value="media">Media</option>
+        <option value="proporcion">Proporción</option>
+      </select>
+
+      <label for="parametro">Media o proporción poblacional (μ o p):</label>
+      <input type="number" id="parametro" step="any" required />
+
+      <div id="campoDesviacion">
+        <label for="desviacion">Desviación estándar poblacional (σ):</label>
+        <input type="number" id="desviacion" step="any" />
+      </div>
+
+      <label for="n">Tamaño de la muestra (n):</label>
+      <input type="number" id="n" min="1" required />
+
+      <label for="confianza">Niveles de confianza (ej: 90,95,99):</label>
+      <input type="text" id="confianza" value="95" required />
+
+      <button type="submit">Calcular</button>
+    </form>
+
+    <div class="botones">
+      <button type="button" id="btnLimpiar">Limpiar</button>
+      <button id="btnRegresar" type="button">Regresar</button>
+    </div>
+
+    <div id="resultado"></div>
+    <canvas id="grafica"></canvas>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    const tipo = document.getElementById('tipo');
+    const campoDesviacion = document.getElementById('campoDesviacion');
+    const form = document.getElementById('formulario');
+    const resultado = document.getElementById('resultado');
+    const ctx = document.getElementById('grafica').getContext('2d');
+    let chart = null;
+
+    tipo.addEventListener('change', () => {
+      campoDesviacion.style.display = tipo.value === 'media' ? 'block' : 'none';
+    });
+
+    function zScore(conf) {
+      const zTable = { 80: 1.2816, 85: 1.4395, 90: 1.6449, 95: 1.96, 98: 2.326, 99: 2.576, 99.9: 3.291 };
+      const parsed = parseFloat(conf);
+      let closest = 95, minDiff = Infinity;
+      for (let key in zTable) {
+        let diff = Math.abs(parsed - key);
+        if (diff < minDiff) {
+          minDiff = diff;
+          closest = key;
+        }
+      }
+      return zTable[closest];
+    }
+
+    function crearDatosNormal(media, sigma, rango = 4) {
+      const puntos = 200;
+      const datosX = [], datosY = [];
+      const inicio = media - rango * sigma;
+      const fin = media + rango * sigma;
+      const paso = (fin - inicio) / puntos;
+
+      for (let i = 0; i <= puntos; i++) {
+        const x = inicio + i * paso;
+        const y = (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * ((x - media) / sigma) ** 2);
+        datosX.push(x);
+        datosY.push(y);
+      }
+      return { x: datosX, y: datosY };
+    }
+
+    function dibujarGrafica(media, sigma, z) {
+      const datos = crearDatosNormal(media, sigma);
+
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: datos.x,
+          datasets: [{
+            label: 'Distribución Muestral',
+            data: datos.y,
+            borderColor: '#32CD32',
+            backgroundColor: 'rgba(50,205,50,0.2)',
+            borderWidth: 2,
+            pointRadius: 0,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          animation: { duration: 500 },
+          scales: {
+            x: {
+              type: 'linear',
+              min: media - 4 * sigma,
+              max: media + 4 * sigma,
+              title: {
+                display: true,
+                text: 'Valor muestral',
+                color: 'white'
+              },
+              ticks: { color: 'white' },
+              grid: { color: '#444' }
+            },
+            y: {
+              title: {
+                display: true,
+                text: 'Densidad de probabilidad',
+                color: 'white'
+              },
+              ticks: { color: 'white' },
+              grid: { color: '#444' }
+            }
+          },
+          plugins: {
+            legend: {
+              labels: {
+                color: 'white'
+              }
+            }
+          }
+        }
+      });
+    }
+
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const esMedia = tipo.value === 'media';
+      const param = parseFloat(document.getElementById('parametro').value);
+      const sigma = esMedia ? parseFloat(document.getElementById('desviacion').value) : null;
+      const n = parseInt(document.getElementById('n').value);
+      const confs = document.getElementById('confianza').value.split(',').map(c => parseFloat(c.trim()));
+
+      if (isNaN(param) || n <= 0 || (esMedia && (!sigma || sigma <= 0))) {
+        resultado.innerHTML = '<p style="color: #f44336;">Ingrese valores válidos.</p>';
+        return;
+      }
+
+      const mediaMuestral = param;
+      const errorEstandar = esMedia
+        ? sigma / Math.sqrt(n)
+        : Math.sqrt((param * (1 - param)) / n);
+
+      let html = `
+        <p><strong>${esMedia ? 'Media' : 'Proporción'} muestral:</strong> ${mediaMuestral.toFixed(4)}</p>
+        <p><strong>Error estándar:</strong> ${errorEstandar.toFixed(4)}</p>
+        <p><strong>Intervalos de confianza:</strong></p>
+        <ul>
+      `;
+
+      confs.forEach(conf => {
+        const z = zScore(conf);
+        const margen = z * errorEstandar;
+        const li = mediaMuestral - margen;
+        const ls = mediaMuestral + margen;
+        html += `<li>${conf}%: (${li.toFixed(4)}, ${ls.toFixed(4)})</li>`;
+      });
+
+      html += '</ul>';
+      resultado.innerHTML = html;
+
+      dibujarGrafica(mediaMuestral, errorEstandar, zScore(confs[0]));
+    });
+
+    document.getElementById('btnLimpiar').addEventListener('click', () => {
+      form.reset();
+      resultado.innerHTML = '';
+      campoDesviacion.style.display = 'block';
+      if (chart) {
+        chart.destroy();
+        chart = null;
+      }
+    });
+
+    document.getElementById('btnRegresar').addEventListener('click', () => {
+      window.location.href = 'modulo2.html'; 
+  });
+  </script>
+</body>
+</html>

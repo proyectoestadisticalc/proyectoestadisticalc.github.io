@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Distribución Normal</title>
+  <style>
+    :root { --rojo: #e53935; --fondo: #121212; --texto: #fff; --gris: #ccc; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 2rem;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: var(--fondo);
+      color: var(--texto);
+      display: flex; justify-content: center;
+    }
+    main {
+      max-width: 900px; width: 100%;
+      display: flex; flex-direction: column; gap: 2rem;
+    }
+    h1 { text-align: center; color: var(--rojo); margin-bottom: 0; }
+    label { font-weight: bold; }
+    input, select {
+      width: 100%; padding: 0.6rem;
+      background: #222; color: white;
+      border: 1px solid #444; border-radius: 5px;
+      font-size: 1rem;
+    }
+    button {
+      background: var(--rojo); color: white;
+      border: none; border-radius: 5px;
+      padding: 0.6rem 1.2rem;
+      font-size: 1rem; cursor: pointer;
+    }
+    button:hover { background: #ff6f60; }
+    .formulario {
+      background: #1e1e1e; padding: 2rem;
+      border-radius: 10px; box-shadow: 0 0 10px #e53935;
+      display: flex; flex-direction: column; gap: 1rem;
+    }
+    .resultado {
+      background: #292929; padding: 1rem;
+      border-radius: 6px; font-size: 1.1rem;
+      white-space: pre-line;
+    }
+    canvas { background: #1a1a1a; border-radius: 10px; }
+
+    .botones {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-top: 0.5rem;
+    }
+
+    .intervalo-confianza {
+      margin-top: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.2rem;
+    }
+
+    .descripcion {
+  color: var(--gris);
+  font-style: italic;
+  text-align: center;
+  margin-top: 0.2rem;
+  margin-bottom: 1.5rem;
+  font-size: 1.1rem;
+}
+  </style>
+</head>
+<body>
+  <main>
+    <div class="formulario">
+        <h1>Distribución Normal</h1>
+        <p class="descripcion">
+          Calcula probabilidades normales con o sin intervalos de confianza.
+        </p>
+      <label>Media (μ):</label>
+      <input id="media" type="number" step="any" placeholder="Ej. 100" />
+      <label>Desviación estándar (σ):</label>
+      <input id="desviacion" type="number" step="any" placeholder="Ej. 15" />
+      <label>Tipo de cálculo:</label>
+      <select id="tipo">
+        <option value="menor">P(X &lt; x)</option>
+        <option value="mayor">P(X &gt; x)</option>
+        <option value="entre">P(x1 &lt; X &lt; x2)</option>
+      </select>
+      <div id="valores"></div>
+
+      <div class="intervalo-confianza">
+        <input type="checkbox" id="intervaloConfianza" />
+        <label for="intervaloConfianza">Calcular intervalo de confianza (%)</label>
+        <input id="nivelConfianza" type="number" min="50" max="99.9" step="0.1" placeholder="95" style="width: 60px; background:#222; color:white; border:1px solid #444; border-radius:5px; padding:0.3rem;" />
+      </div>
+
+      <div class="botones">
+        <button id="calcular">Calcular</button>
+        <button id="limpiar">Limpiar</button>
+        <button id="regresar">Regresar</button>
+      </div>
+
+      <div class="resultado" id="resultado"></div>
+    </div>
+    <canvas id="graficoCurva" width="900" height="400"></canvas>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    function normalPDF(x, mu, sigma) {
+      return (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((x - mu) / sigma, 2));
+    }
+    function normalCDF(x, mu, sigma) {
+      return 0.5 * (1 + erf((x - mu) / (sigma * Math.sqrt(2))));
+    }
+    function erf(x) {
+      const sign = x < 0 ? -1 : 1;
+      x = Math.abs(x);
+      const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741;
+      const a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911;
+      const t = 1 / (1 + p * x);
+      const y = 1 - ((((a5 * t + a4) * t + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+      return sign * y;
+    }
+
+    // Aproximación de la inversa de la CDF normal estándar (para intervalo de confianza)
+    function inverseNormalCDF(p) {
+      if (p <= 0 || p >= 1) throw new Error("p debe estar entre 0 y 1");
+      const a1 = -39.6968302866538, a2 = 220.946098424521,
+            a3 = -275.928510446969, a4 = 138.357751867269,
+            a5 = -30.6647980661472, a6 = 2.50662827745924;
+      const b1 = -54.4760987982241, b2 = 161.585836858041,
+            b3 = -155.698979859887, b4 = 66.8013118877197,
+            b5 = -13.2806815528857;
+      const c1 = -0.00778489400243029, c2 = -0.322396458041136,
+            c3 = -2.40075827716184, c4 = -2.54973253934373,
+            c5 = 4.37466414146497, c6 = 2.93816398269878;
+      const d1 = 0.00778469570904146, d2 = 0.32246712907004,
+            d3 = 2.445134137143, d4 = 3.75440866190742;
+      const plow = 0.02425, phigh = 1 - plow;
+
+      let q, r;
+      if (p < plow) {
+        q = Math.sqrt(-2 * Math.log(p));
+        return (((((c1*q+c2)*q+c3)*q+c4)*q+c5)*q+c6) /
+               ((((d1*q+d2)*q+d3)*q+d4)*q+1);
+      }
+      if (p > phigh) {
+        q = Math.sqrt(-2 * Math.log(1-p));
+        return -(((((c1*q+c2)*q+c3)*q+c4)*q+c5)*q+c6) /
+                ((((d1*q+d2)*q+d3)*q+d4)*q+1);
+      }
+      q = p - 0.5;
+      r = q*q;
+      return (((((a1*r+a2)*r+a3)*r+a4)*r+a5)*r+a6)*q /
+             (((((b1*r+b2)*r+b3)*r+b4)*r+b5)*r+1);
+    }
+
+    function actualizarInputs() {
+      const tipo = document.getElementById("tipo").value;
+      const valores = document.getElementById("valores");
+      valores.innerHTML = tipo === "entre" ? `
+        <label>Valor x1:</label><input id="x1" type="number" step="any" />
+        <label>Valor x2:</label><input id="x2" type="number" step="any" />
+      ` : `
+        <label>Valor x:</label><input id="x1" type="number" step="any" />
+      `;
+    }
+    document.getElementById("tipo").addEventListener("change", actualizarInputs);
+    actualizarInputs();
+
+    document.getElementById("calcular").addEventListener("click", () => {
+      const mu = parseFloat(document.getElementById("media").value);
+      const sigma = parseFloat(document.getElementById("desviacion").value);
+      const tipo = document.getElementById("tipo").value;
+      const x1 = parseFloat(document.getElementById("x1").value);
+      const x2 = tipo === "entre" ? parseFloat(document.getElementById("x2").value) : null;
+      const intervalo = document.getElementById("intervaloConfianza").checked;
+      let nivelConfianza = parseFloat(document.getElementById("nivelConfianza").value);
+
+      if (isNaN(mu) || isNaN(sigma) || sigma <= 0 || isNaN(x1) || (tipo === "entre" && isNaN(x2))) {
+        document.getElementById("resultado").innerText = "Valores inválidos.";
+        return;
+      }
+
+      if (intervalo) {
+        if (isNaN(nivelConfianza) || nivelConfianza < 50 || nivelConfianza > 99.9) {
+          nivelConfianza = 95;
+        }
+      }
+
+      let resultado = "";
+      if (tipo === "menor") {
+        const p = normalCDF(x1, mu, sigma).toFixed(6);
+        resultado = `P(X < ${x1}) = ${p}`;
+      } else if (tipo === "mayor") {
+        const p = (1 - normalCDF(x1, mu, sigma)).toFixed(6);
+        resultado = `P(X > ${x1}) = ${p}`;
+      } else {
+        const a = Math.min(x1, x2), b = Math.max(x1, x2);
+        const p = (normalCDF(b, mu, sigma) - normalCDF(a, mu, sigma)).toFixed(6);
+        resultado = `P(${a} < X < ${b}) = ${p}`;
+      }
+
+      if (intervalo) {
+        // Supongamos n=1 para la desviación estándar (puedes ajustar según datos)
+        const alfa = 1 - nivelConfianza / 100;
+        const z = inverseNormalCDF(1 - alfa / 2);
+        const margen = z * sigma / Math.sqrt(1);
+        const li = (mu - margen).toFixed(3);
+        const ls = (mu + margen).toFixed(3);
+        resultado += `\nIntervalo de confianza ${nivelConfianza}%: [${li}, ${ls}]`;
+      }
+
+      document.getElementById("resultado").innerText = resultado;
+      graficar(mu, sigma, tipo, x1, x2);
+    });
+
+    document.getElementById("limpiar").addEventListener("click", () => {
+      document.getElementById("media").value = "";
+      document.getElementById("desviacion").value = "";
+      document.getElementById("tipo").value = "menor";
+      actualizarInputs();
+      document.getElementById("intervaloConfianza").checked = false;
+      document.getElementById("nivelConfianza").value = "";
+      document.getElementById("resultado").innerText = "";
+      if(window.chartInstance) window.chartInstance.destroy();
+    });
+
+    document.getElementById("regresar").addEventListener("click", () => {
+      window.location.href = 'modulo1.html';
+    });
+
+    function graficar(mu, sigma, tipo, x1, x2) {
+      const min = mu - 4 * sigma, max = mu + 4 * sigma;
+      const paso = sigma / 80;
+      const labels = [], datos = [], sombreado = [];
+
+      for (let x = min; x <= max; x += paso) {
+        const y = normalPDF(x, mu, sigma);
+        labels.push(x.toFixed(2));
+        datos.push(y);
+
+        if (tipo === "menor" && x <= x1) sombreado.push(y);
+        else if (tipo === "mayor" && x >= x1) sombreado.push(y);
+        else if (tipo === "entre" && x >= Math.min(x1,x2) && x <= Math.max(x1,x2)) sombreado.push(y);
+        else sombreado.push(null);
+      }
+
+      const ctx = document.getElementById("graficoCurva").getContext("2d");
+      if (window.chartInstance) window.chartInstance.destroy();
+      window.chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: `Distribución N(μ=${mu}, σ=${sigma})`,
+              data: datos,
+              borderColor: '#e53935',
+              backgroundColor: 'rgba(0,0,0,0)',
+              pointRadius: 0,
+              tension: 0.3
+            },
+            {
+              label: 'Área bajo la curva',
+              data: sombreado,
+              borderColor: 'rgba(255,255,255,0.2)',
+              backgroundColor: 'rgba(229,57,53,0.4)',
+              pointRadius: 0,
+              tension: 0.3,
+              fill: true
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { labels: { color: 'white' } },
+            title: {
+              display: true,
+              text: 'Curva de la distribución normal',
+              color: 'white',
+              font: { size: 18 }
+            }
+          },
+          scales: {
+            x: {
+              ticks: { color: 'white' },
+              title: { display: true, text: 'X', color: 'white' }
+            },
+            y: {
+              ticks: { color: 'white' },
+              title: { display: true, text: 'f(X)', color: 'white' },
+              beginAtZero: true
+            }
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>

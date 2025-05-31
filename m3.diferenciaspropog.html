@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Prueba de Diferencia entre Proporciones - Muestras Grandes</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      background-color: #000;
+      color: white;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      color: #1E90FF;
+      text-align: center;
+      margin-bottom: 15px;
+    }
+    .container {
+      max-width: 700px;
+      margin: auto;
+      background: #111;
+      padding: 25px 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px #1E90FF;
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: 600;
+    }
+    input[type=number], select {
+      width: 100%;
+      padding: 10px 12px;
+      margin-top: 6px;
+      border-radius: 8px;
+      border: 2px solid #1E90FF;
+      background: #222;
+      color: white;
+      font-size: 1rem;
+      box-sizing: border-box;
+      transition: border-color 0.3s;
+    }
+    input[type=number]:focus, select:focus {
+      border-color: #66ccff;
+      outline: none;
+      background: #333;
+    }
+    input.invalid {
+      border-color: #FF4136 !important;
+    }
+    button {
+      margin-top: 20px;
+      width: 100%;
+      padding: 14px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: #fff;
+      background-color: #1E90FF;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #007ACC;
+    }
+    .result {
+      margin-top: 30px;
+      background: #111;
+      border: 2px solid #1E90FF;
+      border-radius: 8px;
+      padding: 15px;
+      font-family: 'Courier New', Courier, monospace;
+      white-space: pre-wrap;
+      min-height: 120px;
+    }
+    .graph-container {
+      margin-top: 30px;
+      height: 350px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Prueba de Diferencia entre Proporciones para Muestras Grandes</h1>
+    
+    <label for="p1">Proporción muestral 1 (p₁)</label>
+    <input type="number" id="p1" step="any" min="0" max="1" placeholder="Ejemplo: 0.45" />
+
+    <label for="n1">Tamaño muestra 1 (n₁)</label>
+    <input type="number" id="n1" step="1" min="1" placeholder="Ejemplo: 100" />
+
+    <label for="p2">Proporción muestral 2 (p₂)</label>
+    <input type="number" id="p2" step="any" min="0" max="1" placeholder="Ejemplo: 0.50" />
+
+    <label for="n2">Tamaño muestra 2 (n₂)</label>
+    <input type="number" id="n2" step="1" min="1" placeholder="Ejemplo: 120" />
+
+    <label for="d0">Diferencia bajo H₀ (d₀)</label>
+    <input type="number" id="d0" step="any" value="0" />
+
+    <label for="alfa">Nivel de significancia (α)</label>
+    <input type="number" id="alfa" step="any" value="0.05" min="0.0001" max="0.9999" />
+
+    <label for="cola">Tipo de prueba</label>
+    <select id="cola">
+      <option value="≠" selected>Bilateral (≠)</option>
+      <option value=">">Una cola (mayor que >)</option>
+      <option value="<">Una cola (menor que <)</option>
+    </select>
+
+    <button onclick="calcular()">Calcular</button>
+    <button onclick="limpiar()">Limpiar</button>
+    <button onclick="window.location.href='modulo3.html'">Regresar</button>
+
+    <div class="result" id="resultado"></div>
+    <div class="graph-container">
+      <canvas id="grafico"></canvas>
+    </div>
+  </div>
+
+  <script>
+    let grafico = null;
+
+    function validarCampos() {
+      let valid = true;
+      const p1 = document.getElementById("p1");
+      const p2 = document.getElementById("p2");
+      const n1 = document.getElementById("n1");
+      const n2 = document.getElementById("n2");
+      const d0 = document.getElementById("d0");
+      const alfa = document.getElementById("alfa");
+
+      // Validar proporciones entre 0 y 1
+      if (isNaN(parseFloat(p1.value)) || p1.value === "" || parseFloat(p1.value) < 0 || parseFloat(p1.value) > 1) {
+        p1.classList.add("invalid");
+        valid = false;
+      } else {
+        p1.classList.remove("invalid");
+      }
+
+      if (isNaN(parseFloat(p2.value)) || p2.value === "" || parseFloat(p2.value) < 0 || parseFloat(p2.value) > 1) {
+        p2.classList.add("invalid");
+        valid = false;
+      } else {
+        p2.classList.remove("invalid");
+      }
+
+      // Validar tamaños de muestra enteros > 0
+      if (isNaN(parseInt(n1.value)) || n1.value === "" || parseInt(n1.value) < 1) {
+        n1.classList.add("invalid");
+        valid = false;
+      } else {
+        n1.classList.remove("invalid");
+      }
+
+      if (isNaN(parseInt(n2.value)) || n2.value === "" || parseInt(n2.value) < 1) {
+        n2.classList.add("invalid");
+        valid = false;
+      } else {
+        n2.classList.remove("invalid");
+      }
+
+      // Diferencia bajo H0 puede ser cualquier número
+      if (isNaN(parseFloat(d0.value)) || d0.value === "") {
+        d0.classList.add("invalid");
+        valid = false;
+      } else {
+        d0.classList.remove("invalid");
+      }
+
+      // Nivel alfa entre 0 y 1
+      if (isNaN(parseFloat(alfa.value)) || alfa.value === "" || parseFloat(alfa.value) <= 0 || parseFloat(alfa.value) >= 1) {
+        alfa.classList.add("invalid");
+        valid = false;
+      } else {
+        alfa.classList.remove("invalid");
+      }
+
+      return valid;
+    }
+
+    function calcular() {
+      if (!validarCampos()) {
+        document.getElementById("resultado").innerText = "Por favor, corrige los campos en rojo antes de calcular.";
+        if (grafico) {
+          grafico.destroy();
+          grafico = null;
+        }
+        return;
+      }
+
+      const p1 = parseFloat(document.getElementById("p1").value);
+      const p2 = parseFloat(document.getElementById("p2").value);
+      const n1 = parseInt(document.getElementById("n1").value);
+      const n2 = parseInt(document.getElementById("n2").value);
+      const d0 = parseFloat(document.getElementById("d0").value);
+      const alfa = parseFloat(document.getElementById("alfa").value);
+      const cola = document.getElementById("cola").value;
+
+      // Estadístico z
+      const diff = p1 - p2;
+      const se = Math.sqrt((p1 * (1 - p1)) / n1 + (p2 * (1 - p2)) / n2);
+      const z = (diff - d0) / se;
+
+      // p-valor según tipo de prueba
+      let pValor;
+      if (cola === "≠") {
+        pValor = 2 * (1 - normalCDF(Math.abs(z)));
+      } else if (cola === ">") {
+        pValor = 1 - normalCDF(z);
+      } else {
+        pValor = normalCDF(z);
+      }
+
+      // Decisión
+      const rechaza = pValor < alfa;
+
+      // Intervalo de confianza (para la diferencia)
+      const zCrit = invNormal(1 - (cola === "≠" ? alfa / 2 : alfa));
+      const margen = zCrit * se;
+      const limInf = diff - margen;
+      const limSup = diff + margen;
+
+      let resultado = "";
+      resultado += `z = ${z.toFixed(4)}\n`;
+      resultado += `p-valor = ${pValor.toFixed(4)}\n`;
+      resultado += `IC ${(1 - alfa) * 100}%: (${limInf.toFixed(4)}, ${limSup.toFixed(4)})\n`;
+      resultado += rechaza ? "Se rechaza H₀" : "No se rechaza H₀";
+
+      document.getElementById("resultado").innerText = resultado;
+
+      graficar(z, alfa, cola);
+    }
+
+    // Función distribución normal acumulada (CDF) aproximada
+    function normalCDF(z) {
+      return (1 - erf(-z / Math.sqrt(2))) / 2;
+    }
+
+    // Función inversa de la normal estándar (aproximación)
+    // Basada en algoritmo de Abramowitz y Stegun (1964)
+    function invNormal(p) {
+      if (p <= 0 || p >= 1) throw new Error("p debe estar en (0,1)");
+      // Coeficientes
+      const a1 = -39.6968302866538,
+        a2 = 220.946098424521,
+        a3 = -275.928510446969,
+        a4 = 138.357751867269,
+        a5 = -30.6647980661472,
+        a6 = 2.50662827745924;
+
+      const b1 = -54.4760987982241,
+        b2 = 161.585836858041,
+        b3 = -155.698979859887,
+        b4 = 66.8013118877197,
+        b5 = -13.2806815528857;
+
+      const c1 = -0.00778489400243029,
+        c2 = -0.322396458041136,
+        c3 = -2.40075827716184,
+        c4 = -2.54973253934373,
+        c5 = 4.37466414146497,
+        c6 = 2.93816398269878;
+
+      const d1 = 0.00778469570904146,
+        d2 = 0.32246712907004,
+        d3 = 2.445134137143,
+        d4 = 3.75440866190742;
+
+      // Definir rangos
+      const pLow = 0.02425;
+      const pHigh = 1 - pLow;
+
+      let q, r, x;
+
+      if (p < pLow) {
+        q = Math.sqrt(-2 * Math.log(p));
+        x = (((((c1 * q + c2) * q + c3) * q + c4) * q + c5) * q + c6) /
+            ((((d1 * q + d2) * q + d3) * q + d4) * q + 1);
+      } else if (p <= pHigh) {
+        q = p - 0.5;
+        r = q * q;
+        x = (((((a1 * r + a2) * r + a3) * r + a4) * r + a5) * r + a6) * q /
+            (((((b1 * r + b2) * r + b3) * r + b4) * r + b5) * r + 1);
+      } else {
+        q = Math.sqrt(-2 * Math.log(1 - p));
+        x = -(((((c1 * q + c2) * q + c3) * q + c4) * q + c5) * q + c6) /
+            ((((d1 * q + d2) * q + d3) * q + d4) * q + 1);
+      }
+
+      // Refinamiento de Newton
+      for (let i = 0; i < 2; i++) {
+        let err = normalCDF(x) - p;
+        let u = err / (Math.exp(-x * x / 2) / Math.sqrt(2 * Math.PI));
+        x = x - u;
+      }
+      return x;
+    }
+
+    // Error function approximation needed for normalCDF
+    // https://stackoverflow.com/questions/36784763/is-there-a-javascript-implementation-of-erf
+    function erf(x) {
+      // save the sign of x
+      const sign = (x >= 0) ? 1 : -1;
+      x = Math.abs(x);
+
+      // constants
+      const a1 = 0.254829592,
+        a2 = -0.284496736,
+        a3 = 1.421413741,
+        a4 = -1.453152027,
+        a5 = 1.061405429,
+        p = 0.3275911;
+
+      // A&S formula 7.1.26
+      const t = 1.0 / (1.0 + p * x);
+      const y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+
+      return sign * y;
+    }
+
+    function graficar(z, alfa, cola) {
+      if (grafico) {
+        grafico.destroy();
+      }
+
+      // Rango para x en la gráfica normal estándar
+      const minX = -4;
+      const maxX = 4;
+      const step = 0.01;
+      const xs = [];
+      const ys = [];
+
+      for (let x = minX; x <= maxX; x += step) {
+        xs.push(x);
+        ys.push((1 / Math.sqrt(2 * Math.PI)) * Math.exp(-x * x / 2));
+      }
+
+      // Áreas de rechazo
+      let rejectZones = [];
+      if (cola === "≠") {
+        const zCrit = invNormal(1 - alfa / 2);
+        rejectZones.push({ min: minX, max: -zCrit });
+        rejectZones.push({ min: zCrit, max: maxX });
+      } else if (cola === "<") {
+        const zCrit = invNormal(alfa);
+        rejectZones.push({ min: minX, max: zCrit });
+      } else {
+        const zCrit = invNormal(1 - alfa);
+        rejectZones.push({ min: zCrit, max: maxX });
+      }
+
+      // Crear datasets para Chart.js
+      const normalData = {
+        label: "Densidad Normal Estándar",
+        data: xs.map((x, i) => ({ x: x, y: ys[i] })),
+        borderColor: "#1E90FF",
+        borderWidth: 2,
+        fill: false,
+        pointRadius: 0,
+        tension: 0.1,
+      };
+
+      // Área de rechazo: crear para cada zona, con relleno
+      const fillAreas = rejectZones.map((zone, idx) => {
+        const dataZone = xs
+          .map((x, i) => {
+            if (x >= zone.min && x <= zone.max) return { x: x, y: ys[i] };
+            return null;
+          })
+          .filter(Boolean);
+
+        // Añadir puntos en base para rellenar el área
+        if (dataZone.length > 0) {
+          dataZone.unshift({ x: dataZone[0].x, y: 0 });
+          dataZone.push({ x: dataZone[dataZone.length - 1].x, y: 0 });
+        }
+
+        return {
+          label: `Zona rechazo ${idx + 1}`,
+          data: dataZone,
+          borderWidth: 0,
+          backgroundColor: "rgba(255, 65, 54, 0.4)",
+          fill: true,
+          showLine: true,
+          pointRadius: 0,
+          order: 0,
+        };
+      });
+
+      // Punto z estadístico
+      const zPoint = {
+        label: "Estadístico z",
+        data: [{ x: z, y: (1 / Math.sqrt(2 * Math.PI)) * Math.exp(-z * z / 2) }],
+        borderColor: "#FFDC00",
+        backgroundColor: "#FFDC00",
+        pointRadius: 8,
+        type: "scatter",
+        showLine: false,
+        order: 10,
+      };
+
+      const ctx = document.getElementById("grafico").getContext("2d");
+
+      grafico = new Chart(ctx, {
+        type: "line",
+        data: {
+          datasets: [normalData, ...fillAreas, zPoint],
+        },
+        options: {
+          responsive: true,
+          animation: false,
+          scales: {
+            x: {
+              type: "linear",
+              min: minX,
+              max: maxX,
+              title: {
+                display: true,
+                text: "Valor z",
+                color: "white",
+                font: { size: 14 },
+              },
+              ticks: { color: "white" },
+              grid: { color: "#444" },
+            },
+            y: {
+              min: 0,
+              max: 0.45,
+              display: true,
+              title: {
+                display: true,
+                text: "Densidad",
+                color: "white",
+                font: { size: 14 },
+              },
+              ticks: { color: "white" },
+              grid: { color: "#444" },
+            },
+          },
+          plugins: {
+            legend: {
+              labels: { color: "white" },
+            },
+            tooltip: {
+              enabled: true,
+              callbacks: {
+                label: (context) =>
+                  `x: ${context.parsed.x.toFixed(2)}, y: ${context.parsed.y.toFixed(4)}`,
+              },
+            },
+          },
+          interaction: {
+            intersect: false,
+            mode: 'nearest',
+          },
+          layout: {
+            padding: { top: 10 },
+          },
+          backgroundColor: "#000",
+        },
+      });
+    }
+
+    function limpiar() {
+      document.getElementById("p1").value = "";
+      document.getElementById("p2").value = "";
+      document.getElementById("n1").value = "";
+      document.getElementById("n2").value = "";
+      document.getElementById("d0").value = "0";
+      document.getElementById("alfa").value = "0.05";
+      document.getElementById("cola").value = "≠";
+      document.getElementById("resultado").innerText = "";
+      if (grafico) {
+        grafico.destroy();
+        grafico = null;
+      }
+      const inputs = document.querySelectorAll("input");
+      inputs.forEach(i => i.classList.remove("invalid"));
+    }
+  </script>
+</body>
+</html>

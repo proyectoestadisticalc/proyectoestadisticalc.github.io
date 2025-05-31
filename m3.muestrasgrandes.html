@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prueba de Hipótesis para Proporciones</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #000000;
+      margin: 0;
+      padding: 20px;
+      color: white;
+    }
+    h1 {
+      text-align: center;
+      color: #1E90FF;
+      margin-bottom: 5px;
+    }
+    .container {
+      max-width: 700px;
+      background: #111;
+      margin: 20px auto;
+      padding: 25px 30px;
+      box-shadow: 0 2px 15px rgba(30,144,255,0.3);
+      border-radius: 8px;
+      color: white;
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: 600;
+      color: white;
+    }
+    input[type=number], select {
+      width: 100%;
+      margin-top: 6px;
+      padding: 10px 12px;
+      font-size: 1rem;
+      border: 2px solid #1E90FF;
+      border-radius: 8px;
+      background: #222;
+      color: white;
+      box-sizing: border-box;
+    }
+    input[type=number]:focus, select:focus {
+      border-color: #66ccff;
+      outline: none;
+      background: #333;
+      color: white;
+    }
+    .result {
+      margin-top: 30px;
+      padding: 20px;
+      background: #111;
+      border-radius: 8px;
+      border: 1.5px solid #1E90FF;
+      color: white;
+      font-size: 1.1rem;
+      font-family: 'Courier New', Courier, monospace;
+    }
+    button {
+      margin-top: 20px;
+      width: 100%;
+      padding: 14px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: #fff;
+      background-color: #1E90FF;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #007ACC;
+    }
+    .graph-container {
+      margin-top: 30px;
+      height: 350px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Prueba de Hipótesis para Proporciones con muestras grandes</h1>
+        <p style="text-align:center; color:#1E90FF;">
+      Calcula la prueba de hipótesis para proporciones con muestras grandes.
+    </p>
+
+    <label for="p0">Proporción bajo H₀ (p₀):</label>
+    <input type="number" id="p0" step="0.01" min="0" max="1" />
+
+    <label for="phat">Proporción muestral (p̂):</label>
+    <input type="number" id="phat" step="0.01" min="0" max="1" />
+
+    <label for="n">Tamaño de muestra (n):</label>
+    <input type="number" id="n" step="1" min="1" />
+
+    <label for="alpha">Nivel de significancia (α):</label>
+    <input type="number" id="alpha" step="0.001" value="0.05" min="0" max="1" />
+
+    <label for="tipo">Tipo de prueba:</label>
+    <select id="tipo">
+      <option value="left">Una cola izquierda (H₁: p &lt; p₀)</option>
+      <option value="right">Una cola derecha (H₁: p &gt; p₀)</option>
+      <option value="two">Dos colas (H₁: p ≠ p₀)</option>
+    </select>
+
+    <button onclick="calcularHipotesis()">Calcular</button>
+    <button onclick="limpiarCampos()">Limpiar</button>
+    <button onclick="window.location.href='modulo3.html'">Regresar</button>
+
+    <div id="resultado" class="result"></div>
+    <div class="graph-container">
+      <canvas id="canvasGrafica"></canvas>
+    </div>
+  </div>
+
+  <script>
+    function calcularHipotesis() {
+      const p0 = parseFloat(document.getElementById('p0').value);
+      const phat = parseFloat(document.getElementById('phat').value);
+      const n = parseFloat(document.getElementById('n').value);
+      const alpha = parseFloat(document.getElementById('alpha').value);
+      const tipo = document.getElementById('tipo').value;
+
+      if (isNaN(p0) || isNaN(phat) || isNaN(n) || isNaN(alpha)) {
+        alert("Por favor complete todos los campos correctamente.");
+        return;
+      }
+
+      const z = (phat - p0) / Math.sqrt((p0 * (1 - p0)) / n);
+      let pValue;
+
+      if (tipo === 'left') {
+        pValue = normalCDF(z);
+      } else if (tipo === 'right') {
+        pValue = 1 - normalCDF(z);
+      } else {
+        pValue = 2 * (1 - normalCDF(Math.abs(z)));
+      }
+
+      let decision = pValue < alpha ? "Se rechaza H₀" : "No se rechaza H₀";
+
+      document.getElementById('resultado').innerHTML =
+        `Estadístico z: ${z.toFixed(4)}<br>` +
+        `Valor-p: ${pValue.toFixed(4)}<br>` +
+        `Decisión: <strong>${decision}</strong>`;
+
+      graficar(z, tipo);
+    }
+
+    function normalCDF(z) {
+      return 0.5 * (1 + erf(z / Math.SQRT2));
+    }
+
+    function erf(x) {
+      const sign = Math.sign(x);
+      x = Math.abs(x);
+      const a1 =  0.254829592;
+      const a2 = -0.284496736;
+      const a3 =  1.421413741;
+      const a4 = -1.453152027;
+      const a5 =  1.061405429;
+      const p  =  0.3275911;
+      const t = 1 / (1 + p * x);
+      const y = 1 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+      return sign * y;
+    }
+
+    function limpiarCampos() {
+      document.getElementById('p0').value = '';
+      document.getElementById('phat').value = '';
+      document.getElementById('n').value = '';
+      document.getElementById('alpha').value = 0.05;
+      document.getElementById('tipo').value = 'left';
+      document.getElementById('resultado').innerHTML = '';
+      if (window.grafica) window.grafica.destroy();
+    }
+
+function graficar(zValor, tipo) {
+  const ctx = document.getElementById('canvasGrafica').getContext('2d');
+  if (window.grafica) window.grafica.destroy();
+
+  const labels = [], datos = [], colores = [];
+  const step = 0.05;
+  for (let x = -4; x <= 4; x += step) {
+    labels.push(x.toFixed(2));
+    const y = (1 / Math.sqrt(2 * Math.PI)) * Math.exp(-0.5 * x * x);
+    datos.push(y);
+
+    // Colorear área bajo la curva según tipo de prueba
+    if (
+      (tipo === "left" && x <= zValor) ||
+      (tipo === "right" && x >= zValor) ||
+      (tipo === "two" && (x <= -Math.abs(zValor) || x >= Math.abs(zValor)))
+    ) {
+      colores.push('rgba(255, 99, 132, 0.6)'); // rojo semitransparente
+    } else {
+      colores.push('rgba(30, 144, 255, 0.3)'); // azul claro
+    }
+  }
+
+  window.grafica = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          type: 'line',
+          label: 'Distribución Normal Estándar',
+          data: datos,
+          borderColor: '#1E90FF',
+          backgroundColor: 'transparent',
+          pointRadius: 0,
+          borderWidth: 2
+        },
+        {
+          type: 'bar',
+          label: 'Área Crítica',
+          data: datos,
+          backgroundColor: colores,
+          borderWidth: 0
+        },
+        {
+          type: 'line',
+          label: `z = ${zValor.toFixed(2)}`,
+          data: labels.map(x => parseFloat(x) === parseFloat(zValor.toFixed(2)) ? 0.4 : null),
+          borderColor: 'yellow',
+          borderWidth: 2,
+          pointRadius: 0,
+          stepped: true
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { labels: { color: 'white' } },
+        tooltip: { mode: 'index', intersect: false }
+      },
+      scales: {
+        x: {
+          ticks: { color: 'white', maxRotation: 0 },
+          title: { display: true, text: 'z', color: 'white' }
+        },
+        y: {
+          ticks: { color: 'white' },
+          title: { display: true, text: 'Densidad', color: 'white' }
+        }
+      }
+    }
+  });
+}
+  </script>
+</body>
+</html>

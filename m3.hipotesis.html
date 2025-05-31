@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Calculadora Prueba Hipótesis </title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jstat/1.9.4/jstat.min.js"></script>
+<style>
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #000000;
+  margin: 0; 
+  padding: 20px;
+  color: white;
+}
+h1 {
+  text-align: center;
+  color: #1E90FF;
+  margin-bottom: 5px;
+}
+.container {
+  max-width: 700px;
+  background: #111;
+  margin: 20px auto;
+  padding: 25px 30px;
+  box-shadow: 0 2px 15px rgba(30,144,255,0.3);
+  border-radius: 8px;
+  color: white;
+}
+label {
+  display: block;
+  margin-top: 15px;
+  font-weight: 600;
+  color: white;
+}
+select, input[type=number], textarea {
+  width: 100%;
+  margin-top: 6px;
+  padding: 10px 12px;
+  font-size: 1rem;
+  border: 2px solid #1E90FF;
+  border-radius: 8px;
+  background: #222;
+  color: white;
+  transition: border-color 0.3s ease;
+  box-sizing: border-box;
+}
+select:focus, input[type=number]:focus, textarea:focus {
+  border-color: #66ccff;
+  outline: none;
+  background: #333;
+  color: white;
+}
+.help-text {
+  font-size: 0.85rem;
+  color: #66ccff;
+  margin-top: 3px;
+}
+.error {
+  color: #cc4444;
+  font-weight: 700;
+  margin-top: 10px;
+}
+.result {
+  margin-top: 30px;
+  padding: 20px;
+  background: #111;
+  border-radius: 8px;
+  border: 1.5px solid #1E90FF;
+  color: white;
+  font-size: 1.1rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  font-family: 'Courier New', Courier, monospace;
+}
+button#calcularBtn {
+  margin-top: 25px;
+  width: 100%;
+  padding: 15px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #fff;
+  background-color: #1E90FF;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  user-select: none;
+}
+button#calcularBtn:hover {
+  background-color: #007ACC;
+}
+.buttons-row {
+  display: flex;
+  gap: 15px;
+  margin-top: 15px;
+}
+button#limpiarBtn,
+button#regresarBtn {
+  flex: 1;
+  padding: 14px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+  background-color: #1E90FF;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  user-select: none;
+}
+button#limpiarBtn:hover,
+button#regresarBtn:hover {
+  background-color: #007ACC;
+}
+.hidden {
+  display: none;
+}
+.graph-container {
+  margin-top: 30px;
+  height: 350px;
+  position: relative;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Prueba de Hipótesis para Medias Z/T</h1>
+  <p style="text-align:center; color:#1E90FF;">
+  Calculadora para pruebas de hipótesis para medias, selecciona según tu caso.
+</p>
+  <label for="dist">Seleccione distribución:</label>
+  <select id="dist" required>
+    <option value="" disabled selected>Seleccione</option>
+    <option value="z">Distribución Z </option>
+    <option value="t">Distribución t </option>
+  </select>
+
+  <div id="form-main" class="hidden">
+
+    <label for="alpha">Nivel de significancia (α):</label>
+    <input type="number" id="alpha" min="0.001" max="0.2" step="0.001" value="0.05" required />
+    <small class="help-text">Ejemplo: 0.05, 0.01, 0.10</small>
+
+    <label for="test-type">Tipo de prueba:</label>
+    <select id="test-type" required>
+      <option value="left">Una cola izquierda (H₁: μ &lt; μ₀)</option>
+      <option value="right">Una cola derecha (H₁: μ &gt; μ₀)</option>
+      <option value="two">Dos colas (H₁: μ ≠ μ₀)</option>
+    </select>
+
+    <div id="input-tdof" class="hidden">
+      <label for="df">Grados de libertad (solo para T):</label>
+      <input type="number" id="df" min="1" step="1" value="10" />
+    </div>
+
+    <label for="media-poblacional">Media poblacional (μ₀):</label>
+    <input type="number" id="media-poblacional" step="0.0001" required />
+
+    <label for="media-muestral">Media muestral (x̄):</label>
+    <input type="number" id="media-muestral" step="0.0001" required />
+
+    <label for="desviacion">Desviación estándar (σ para Z / s para T):</label>
+    <input type="number" id="desviacion" step="0.0001" min="0" required />
+
+    <label for="n">Tamaño de muestra (n):</label>
+    <input type="number" id="n" min="1" step="1" required />
+
+    <button id="calcularBtn">Calcular</button>
+
+    <div class="buttons-row">
+      <button id="limpiarBtn" type="button">Limpiar</button>
+      <button id="regresarBtn" type="button">Regresar</button>
+    </div>
+
+    <div id="result" class="result"></div>
+
+    <div class="graph-container">
+      <canvas id="chart"></canvas>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const distSelect = document.getElementById('dist');
+const formMain = document.getElementById('form-main');
+const inputTdof = document.getElementById('input-tdof');
+const dfInput = document.getElementById('df');
+const testType = document.getElementById('test-type');
+const alphaInput = document.getElementById('alpha');
+const mediaPoblacionalInput = document.getElementById('media-poblacional');
+const mediaMuestralInput = document.getElementById('media-muestral');
+const desviacionInput = document.getElementById('desviacion');
+const nInput = document.getElementById('n');
+const calcularBtn = document.getElementById('calcularBtn');
+const limpiarBtn = document.getElementById('limpiarBtn');
+const regresarBtn = document.getElementById('regresarBtn');
+const resultDiv = document.getElementById('result');
+const ctx = document.getElementById('chart').getContext('2d');
+let chart = null;
+
+distSelect.addEventListener('change', () => {
+  if (distSelect.value === 'z') {
+    formMain.classList.remove('hidden');
+    inputTdof.classList.add('hidden');
+    dfInput.required = false;
+    limpiar();
+  } else if (distSelect.value === 't') {
+    formMain.classList.remove('hidden');
+    inputTdof.classList.remove('hidden');
+    dfInput.required = true;
+    limpiar();
+  } else {
+    formMain.classList.add('hidden');
+  }
+});
+
+limpiarBtn.addEventListener('click', () => {
+  limpiar();
+});
+
+regresarBtn.addEventListener('click', () => {
+  window.location.href = 'modulo3.html';
+});
+
+
+function limpiar() {
+  testType.selectedIndex = 0;
+  alphaInput.value = 0.05;
+  dfInput.value = 10;
+  mediaPoblacionalInput.value = '';
+  mediaMuestralInput.value = '';
+  desviacionInput.value = '';
+  nInput.value = '';
+  resultDiv.innerHTML = '';
+  if(chart){
+    chart.destroy();
+    chart = null;
+  }
+}
+
+function calcPvalue(z, dist, df, tail) {
+  if(dist === 'z'){
+    if(tail === 'left') return jStat.normal.cdf(z, 0, 1);
+    if(tail === 'right') return 1 - jStat.normal.cdf(z, 0, 1);
+    return 2 * Math.min(jStat.normal.cdf(z, 0, 1), 1 - jStat.normal.cdf(z, 0, 1));
+  }
+  if(dist === 't'){
+    if(tail === 'left') return jStat.studentt.cdf(z, df);
+    if(tail === 'right') return 1 - jStat.studentt.cdf(z, df);
+    return 2 * Math.min(jStat.studentt.cdf(z, df), 1 - jStat.studentt.cdf(z, df));
+  }
+  return NaN;
+}
+
+function getCriticalValues(alpha, dist, df, tail){
+  if(dist === 'z'){
+    if(tail === 'left') return [jStat.normal.inv(alpha,0,1)];
+    if(tail === 'right') return [jStat.normal.inv(1-alpha,0,1)];
+    let cv1 = jStat.normal.inv(alpha/2,0,1);
+    let cv2 = jStat.normal.inv(1-alpha/2,0,1);
+    return [cv1, cv2];
+  }
+  if(dist === 't'){
+    if(tail === 'left') return [jStat.studentt.inv(alpha, df)];
+    if(tail === 'right') return [jStat.studentt.inv(1-alpha, df)];
+    let cv1 = jStat.studentt.inv(alpha/2, df);
+    let cv2 = jStat.studentt.inv(1-alpha/2, df);
+    return [cv1, cv2];
+  }
+  return [];
+}
+
+function calcular() {
+  const dist = distSelect.value;
+  const alpha = parseFloat(alphaInput.value);
+  const tail = testType.value;
+  const df = dist === 't' ? parseInt(dfInput.value) : 0;
+  const mu0 = parseFloat(mediaPoblacionalInput.value);
+  const xbar = parseFloat(mediaMuestralInput.value);
+  const sd = parseFloat(desviacionInput.value);
+  const n = parseInt(nInput.value);
+
+  if(isNaN(alpha) || alpha <= 0 || alpha >= 1){
+    alert('Nivel de significancia inválido');
+    return;
+  }
+  if(isNaN(mu0) || isNaN(xbar) || isNaN(sd) || isNaN(n) || n<=0 || sd<=0){
+    alert('Por favor completa todos los campos correctamente.');
+    return;
+  }
+  if(dist === 't' && (isNaN(df) || df < 1)){
+    alert('Grados de libertad inválidos para distribución t');
+    return;
+  }
+
+  const se = sd / Math.sqrt(n);
+  const z = (xbar - mu0) / se;
+  const pvalue = calcPvalue(z, dist, df, tail);
+  const cv = getCriticalValues(alpha, dist, df, tail);
+
+  let reject = false;
+  if(tail === 'left'){
+    reject = z <= cv[0];
+  } else if(tail === 'right'){
+    reject = z >= cv[0];
+  } else {
+    reject = z <= cv[0] || z >= cv[1];
+  }
+
+  let resultadoTxt = `Estadístico ${dist === 'z' ? 'Z' : 't'}: ${z.toFixed(4)}\nValor p: ${pvalue.toFixed(6)}\nNivel de significancia (α): ${alpha}\n`;
+  resultadoTxt += reject ? "Decisión: Rechazamos la hipótesis nula H₀" : "Decisión: No rechazamos la hipótesis nula H₀";
+
+  resultDiv.textContent = resultadoTxt;
+
+  dibujarGrafica(dist, alpha, tail, cv, z, df);
+}
+
+function dibujarGrafica(dist, alpha, tail, criticalValues, stat, df) {
+  if(chart){
+    chart.destroy();
+    chart = null;
+  }
+  const labels = [];
+  const dataPoints = [];
+  const minX = dist === 'z' ? -4 : -5;
+  const maxX = dist === 'z' ? 4 : 5;
+  const step = 0.01;
+
+  for(let x = minX; x <= maxX; x += step){
+    labels.push(x.toFixed(2));
+    let y;
+    if(dist === 'z'){
+      y = jStat.normal.pdf(x, 0, 1);
+    } else {
+      y = jStat.studentt.pdf(x, df);
+    }
+    dataPoints.push(y);
+  }
+
+  function shadeRegion(ctx, startX, endX, height){
+    const xStart = chart.scales.x.getPixelForValue(startX.toFixed(2));
+    const xEnd = chart.scales.x.getPixelForValue(endX.toFixed(2));
+    const yTop = chart.scales.y.getPixelForValue(height);
+    const yBottom = chart.scales.y.getPixelForValue(0);
+    const gradient = ctx.createLinearGradient(0, yTop, 0, yBottom);
+    gradient.addColorStop(0, 'rgba(30,144,255,0.4)');
+    gradient.addColorStop(1, 'rgba(30,144,255,0)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(xStart, yTop, xEnd - xStart, yBottom - yTop);
+  }
+
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Densidad de probabilidad',
+        data: dataPoints,
+        borderColor: '#1E90FF',
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        pointRadius: 0,
+        fill: false,
+        tension: 0.1,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      scales: {
+        x: {
+          type: 'linear',
+          min: minX,
+          max: maxX,
+          ticks: {color: '#1E90FF'},
+          grid: {color: '#444'},
+          title: {
+            display: true,
+            text: dist === 'z' ? 'Z' : 't',
+            color: '#1E90FF',
+            font: {size: 16, weight: 'bold'}
+          }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: {color: '#1E90FF'},
+          grid: {color: '#444'},
+          title: {
+            display: true,
+            text: 'Densidad',
+            color: '#1E90FF',
+            font: {size: 16, weight: 'bold'}
+          }
+        }
+      },
+      plugins: {
+        legend: {
+          labels: {color: '#1E90FF', font: {size: 14, weight: 'bold'}}
+        },
+        tooltip: {
+          enabled: true,
+          mode: 'nearest',
+          intersect: false,
+          backgroundColor: '#1E90FF',
+          titleColor: '#fff',
+          bodyColor: '#fff',
+        }
+      },
+      elements: {
+        point: {
+          radius: 0,
+        }
+      },
+      events: ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove'],
+      interaction: {
+        mode: 'nearest',
+        intersect: false,
+      },
+      plugins: {
+        legend: {display: false},
+        annotation: false
+      }
+    },
+    plugins: [{
+      id: 'shade-critical-regions',
+      afterDraw(chart) {
+        const {ctx, scales: {x, y}} = chart;
+        ctx.save();
+
+        // Sombra región crítica
+        ctx.fillStyle = 'rgba(30,144,255,0.3)';
+        ctx.strokeStyle = 'rgba(30,144,255,0.5)';
+        ctx.lineWidth = 1;
+
+        if(tail === 'left'){
+          const startX = x.min;
+          const endX = criticalValues[0];
+          const range = [];
+          for(let px = startX; px <= endX; px += 0.01){
+            range.push(px);
+          }
+          ctx.beginPath();
+          ctx.moveTo(x.getPixelForValue(startX), y.getPixelForValue(0));
+          range.forEach(px => {
+            ctx.lineTo(x.getPixelForValue(px), y.getPixelForValue(
+              dist === 'z' ? jStat.normal.pdf(px,0,1) : jStat.studentt.pdf(px, df)
+            ));
+          });
+          ctx.lineTo(x.getPixelForValue(endX), y.getPixelForValue(0));
+          ctx.closePath();
+          ctx.fill();
+        } else if(tail === 'right'){
+          const startX = criticalValues[0];
+          const endX = x.max;
+          const range = [];
+          for(let px = startX; px <= endX; px += 0.01){
+            range.push(px);
+          }
+          ctx.beginPath();
+          ctx.moveTo(x.getPixelForValue(startX), y.getPixelForValue(0));
+          range.forEach(px => {
+            ctx.lineTo(x.getPixelForValue(px), y.getPixelForValue(
+              dist === 'z' ? jStat.normal.pdf(px,0,1) : jStat.studentt.pdf(px, df)
+            ));
+          });
+          ctx.lineTo(x.getPixelForValue(endX), y.getPixelForValue(0));
+          ctx.closePath();
+          ctx.fill();
+        } else if(tail === 'two'){
+          // Cola izquierda
+          const leftStart = x.min;
+          const leftEnd = criticalValues[0];
+          const leftRange = [];
+          for(let px = leftStart; px <= leftEnd; px += 0.01){
+            leftRange.push(px);
+          }
+          ctx.beginPath();
+          ctx.moveTo(x.getPixelForValue(leftStart), y.getPixelForValue(0));
+          leftRange.forEach(px => {
+            ctx.lineTo(x.getPixelForValue(px), y.getPixelForValue(
+              dist === 'z' ? jStat.normal.pdf(px,0,1) : jStat.studentt.pdf(px, df)
+            ));
+          });
+          ctx.lineTo(x.getPixelForValue(leftEnd), y.getPixelForValue(0));
+          ctx.closePath();
+          ctx.fill();
+
+          // Cola derecha
+          const rightStart = criticalValues[1];
+          const rightEnd = x.max;
+          const rightRange = [];
+          for(let px = rightStart; px <= rightEnd; px += 0.01){
+            rightRange.push(px);
+          }
+          ctx.beginPath();
+          ctx.moveTo(x.getPixelForValue(rightStart), y.getPixelForValue(0));
+          rightRange.forEach(px => {
+            ctx.lineTo(x.getPixelForValue(px), y.getPixelForValue(
+              dist === 'z' ? jStat.normal.pdf(px,0,1) : jStat.studentt.pdf(px, df)
+            ));
+          });
+          ctx.lineTo(x.getPixelForValue(rightEnd), y.getPixelForValue(0));
+          ctx.closePath();
+          ctx.fill();
+        }
+
+        
+        const statX = x.getPixelForValue(stat);
+        const statY = y.getPixelForValue(
+          dist === 'z' ? jStat.normal.pdf(stat, 0, 1) : jStat.studentt.pdf(stat, df)
+        );
+        ctx.beginPath();
+        ctx.arc(statX, statY, 6, 0, 2 * Math.PI);
+        ctx.fillStyle = '#FF6600';
+        ctx.strokeStyle = '#FFA500';
+        ctx.lineWidth = 2;
+        ctx.fill();
+        ctx.stroke();
+
+        
+        ctx.fillStyle = '#FF6600';
+        ctx.font = 'bold 14px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${dist === 'z' ? 'Z' : 't'} = ${stat.toFixed(3)}`, statX, statY - 12);
+
+        ctx.restore();
+      }
+    }]
+  });
+}
+
+calcularBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  calcular();
+});
+</script>
+
+</body>
+</html>

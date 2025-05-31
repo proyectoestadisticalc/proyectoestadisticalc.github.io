@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Calculadora avanzada: Intervalo de confianza para muestra grande con población conocida</title>
+<style>
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #000000;
+    margin: 0; padding: 20px;
+    color: white;
+  }
+  h1 {
+    text-align: center;
+    color: #00cc44;
+    margin-bottom: 10px;
+  }
+  .container {
+    max-width: 720px;
+    background: #111;
+    margin: 20px auto;
+    padding: 25px 30px;
+    box-shadow: 0 2px 10px rgba(0,255,0,0.3);
+    border-radius: 8px;
+    color: white;
+  }
+  label {
+    display: block;
+    margin-top: 15px;
+    font-weight: 600;
+    color: white;
+  }
+  input[type=number], input[type=text] {
+    width: 100%;
+    margin-top: 6px;
+    padding: 8px 10px;
+    font-size: 1rem;
+    border: 1.8px solid #00cc44;
+    border-radius: 6px;
+    background: #222;
+    color: white;
+    transition: border-color 0.25s ease;
+  }
+  input[type=number]:focus, input[type=text]:focus {
+    border-color: #00cc44;
+    outline: none;
+    background: #333;
+    color: white;
+  }
+  .error {
+    color: #cc4444;
+    font-weight: 700;
+    margin-top: 5px;
+  }
+  button {
+    margin-top: 25px;
+    width: 100%;
+    padding: 12px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+    background-color: #00cc44;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  button:hover {
+    background-color: #009933;
+  }
+  .buttons-row {
+    display: flex;
+    gap: 15px;
+    margin-top: 15px;
+    flex-wrap: wrap;
+  }
+  button.secondary {
+    flex: 1;
+    background-color: #00cc44;
+  }
+  button.secondary:hover {
+    background-color: #009933;
+  }
+  .result {
+    margin-top: 30px;
+    padding: 20px;
+    background: #111;
+    border-radius: 8px;
+    border: 1px solid #00cc44;
+    color: white;
+  }
+  .formula {
+    font-family: 'Courier New', Courier, monospace;
+    background: #002200;
+    padding: 10px;
+    border-radius: 5px;
+    margin-top: 10px;
+    user-select: all;
+    color: #00cc44;
+  }
+  canvas {
+    margin-top: 20px;
+    max-width: 100%;
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <h1>Intervalo de Confianza para Muestra Grande con Población Conocida</h1>
+    <p style="text-align:center; color:#88cc88;">Calcula el intervalo de confianza para la proporción poblacional con base en una muestra grande, ingresando los datos necesarios.</p>
+
+    <label for="meanInput">Media muestral (𝑥̄):</label>
+    <input type="number" id="meanInput" step="any" placeholder="Ej: 100" />
+
+    <label for="stdPopInput">Desviación estándar poblacional (σ):</label>
+    <input type="number" id="stdPopInput" step="any" placeholder="Ej: 15" />
+
+    <label for="nInput">Tamaño de muestra (n):</label>
+    <input type="number" id="nInput" min="2" placeholder="Ej: 64" />
+
+    <label for="popSizeInput">Tamaño de población (N) <small>(opcional)</small>:</label>
+    <input type="number" id="popSizeInput" min="1" placeholder="Ej: 1000" />
+
+    <label for="confLevelsInput">Nivel(es) de confianza (%) <small>(separados por coma)</small>:</label>
+    <input type="text" id="confLevelsInput" placeholder="Ej: 90, 95, 99" value="95" />
+
+    <button id="calcularBtn">Calcular Intervalo(s) de Confianza</button>
+
+    <div class="buttons-row">
+      <button id="limpiarBtn" class="secondary">Limpiar</button>
+      <button id="regresarBtn" class="secondary">Regresar</button>
+    </div>
+
+    <div id="errorMessages"></div>
+
+    <div class="result" id="result" style="display:none;"></div>
+
+    <canvas id="chart" width="700" height="120" style="display:none;"></canvas>
+  </div>
+
+<script>
+  document.getElementById('regresarBtn').addEventListener('click', () => {
+    window.location.href = 'modulo2.html';
+  });
+  
+  function zCritico(confianza) {
+    let p = 1 - (1 - confianza) / 2;
+    if (p < 0.5) {
+      return -rationalApproximation( Math.sqrt(-2.0 * Math.log(p)) );
+    } else {
+      return rationalApproximation( Math.sqrt(-2.0 * Math.log(1-p)) );
+    }
+    function rationalApproximation(t) {
+      const c0 = 2.515517;
+      const c1 = 0.802853;
+      const c2 = 0.010328;
+      const d1 = 1.432788;
+      const d2 = 0.189269;
+      const d3 = 0.001308;
+      return t - ((c0 + c1*t + c2*t*t) / (1 + d1*t + d2*t*t + d3*t*t*t));
+    }
+  }
+
+  
+  function dibujarGrafico(media, intervals) {
+    const canvas = document.getElementById('chart');
+    if (!canvas.getContext) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+
+    ctx.clearRect(0, 0, w, h);
+    ctx.font = 'bold 14px Arial';
+
+    const margen = 50;
+
+    let minLi = Math.min(...intervals.map(i => i.li));
+    let maxLs = Math.max(...intervals.map(i => i.ls));
+    let rango = maxLs - minLi;
+    if(rango === 0) rango = 1;
+
+    const escala = (w - 2 * margen) / rango;
+
+    function posX(x) {
+      return margen + (x - minLi) * escala;
+    }
+
+   
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(margen, h/2);
+    ctx.lineTo(w - margen, h/2);
+    ctx.stroke();
+
+    intervals.forEach((i, idx) => {
+      const y = h/2 - 25 + idx*30;
+      ctx.strokeStyle = '#00cc44';
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.moveTo(posX(i.li), y);
+      ctx.lineTo(posX(i.ls), y);
+      ctx.stroke();
+
+      ctx.fillStyle = '#009922';
+      ctx.beginPath();
+      ctx.arc(posX(i.media), y, 8, 0, 2 * Math.PI);
+      ctx.fill();
+
+      ctx.fillStyle = '#ccffcc';
+      ctx.fillText(`${(i.confianza*100).toFixed(2)}%: [${i.li.toFixed(3)}, ${i.ls.toFixed(3)}]`, margen, y - 10);
+    });
+
+    canvas.style.display = 'block';
+  }
+
+  document.getElementById('calcularBtn').addEventListener('click', () => {
+    const errorDiv = document.getElementById('errorMessages');
+    errorDiv.innerHTML = '';
+    errorDiv.style.display = 'none';
+    const resultDiv = document.getElementById('result');
+    resultDiv.style.display = 'none';
+    document.getElementById('chart').style.display = 'none';
+
+    const media = parseFloat(document.getElementById('meanInput').value);
+    const stdPop = parseFloat(document.getElementById('stdPopInput').value);
+    const n = parseInt(document.getElementById('nInput').value);
+    const popSizeRaw = document.getElementById('popSizeInput').value.trim();
+    const popSize = popSizeRaw === '' ? null : parseInt(popSizeRaw);
+    const confLevelsRaw = document.getElementById('confLevelsInput').value.trim();
+
+    // Validación por campo
+    let errores = [];
+    if (isNaN(media)) errores.push('La media muestral (𝑥̄) es requerida y debe ser un número válido.');
+    if (isNaN(stdPop) || stdPop <= 0) errores.push('La desviación estándar poblacional (σ) es requerida y debe ser un número positivo.');
+    if (isNaN(n) || n < 2) errores.push('El tamaño de muestra (n) es requerido y debe ser un entero mayor o igual a 2.');
+    if (popSize !== null && (isNaN(popSize) || popSize < n)) errores.push('El tamaño de población (N) debe ser un entero mayor o igual al tamaño de muestra (n).');
+    if (!confLevelsRaw) errores.push('Debe ingresar al menos un nivel de confianza.');
+
+    // Procesar niveles de confianza
+    let niveles = [];
+    if (confLevelsRaw) {
+      niveles = confLevelsRaw.split(',').map(s => s.trim()).filter(s => s !== '').map(s => Number(s)/100);
+      if (niveles.some(n => isNaN(n) || n <= 0 || n >= 1)) {
+        errores.push('Los niveles de confianza deben ser números entre 0 y 100, separados por coma.');
+      }
+    }
+
+    if (errores.length > 0) {
+      errorDiv.innerHTML = errores.map(e => `<p class="error">${e}</p>`).join('');
+      errorDiv.style.display = 'block';
+      return;
+    }
+
+    // Cálculos
+    // Error estándar con corrección de población finita si N conocida
+    let errorEstandar = stdPop / Math.sqrt(n);
+    if (popSize !== null) {
+      errorEstandar = (stdPop / Math.sqrt(n)) * Math.sqrt((popSize - n) / (popSize - 1));
+    }
+
+    // Cálculo intervalos para cada nivel
+    let outputHTML = `<h2>Resultados:</h2>`;
+    outputHTML += `<p>Media muestral (𝑥̄): <b>${media}</b></p>`;
+    outputHTML += `<p>Desviación estándar poblacional (σ): <b>${stdPop}</b></p>`;
+    outputHTML += `<p>Tamaño de muestra (n): <b>${n}</b></p>`;
+    if(popSize !== null) outputHTML += `<p>Tamaño de población (N): <b>${popSize}</b> (Se aplicó corrección de población finita)</p>`;
+    outputHTML += `<p>Error estándar calculado: <b>${errorEstandar.toFixed(5)}</b></p>`;
+
+    outputHTML += `<h3>Intervalos de confianza:</h3>`;
+    outputHTML += `<ul>`;
+
+    let intervalsForGraph = [];
+
+    niveles.forEach(conf => {
+      // valor crítico z para cada nivel
+      const z = Math.abs(jStatNormalInv(1 - (1 - conf)/2));
+      const li = media - z * errorEstandar;
+      const ls = media + z * errorEstandar;
+
+      intervalsForGraph.push({confianza: conf, li: li, ls: ls, media: media});
+
+      outputHTML += `<li><b>${(conf*100).toFixed(2)}%</b> &rarr; [${li.toFixed(5)}, ${ls.toFixed(5)}]</li>`;
+    });
+
+    outputHTML += `</ul>`;
+
+    resultDiv.innerHTML = outputHTML;
+    resultDiv.style.display = 'block';
+
+    dibujarGrafico(media, intervalsForGraph);
+  });
+
+  // Limpiar campos y resultados
+  document.getElementById('limpiarBtn').addEventListener('click', () => {
+    ['meanInput', 'stdPopInput', 'nInput', 'popSizeInput', 'confLevelsInput'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('errorMessages').innerHTML = '';
+    document.getElementById('errorMessages').style.display = 'none';
+    document.getElementById('result').innerHTML = '';
+    document.getElementById('result').style.display = 'none';
+    document.getElementById('chart').style.display = 'none';
+  });
+
+  // Función inversa para normal estándar usando aproximación (para valor crítico z)
+  function jStatNormalInv(p) {
+    // Uso de la función probit con aproximación
+    if (p < 0 || p > 1) return NaN;
+    if (p === 0) return -Infinity;
+    if (p === 1) return Infinity;
+
+    const a1 = -39.6968302866538;
+    const a2 = 220.946098424521;
+    const a3 = -275.928510446969;
+    const a4 = 138.357751867269;
+    const a5 = -30.6647980661472;
+    const a6 = 2.50662827745924;
+
+    const b1 = -54.4760987982241;
+    const b2 = 161.585836858041;
+    const b3 = -155.698979859887;
+    const b4 = 66.8013118877197;
+    const b5 = -13.2806815528857;
+
+    const c1 = -0.00778489400243029;
+    const c2 = -0.322396458041136;
+    const c3 = -2.40075827716184;
+    const c4 = -2.54973253934373;
+    const c5 = 4.37466414146497;
+    const c6 = 2.93816398269878;
+
+    const d1 = 0.00778469570904146;
+    const d2 = 0.32246712907004;
+    const d3 = 2.445134137143;
+    const d4 = 3.75440866190742;
+
+    const p_low = 0.02425;
+    const p_high = 1 - p_low;
+    let q, r;
+    let ret;
+
+    if (p < p_low) {
+      q = Math.sqrt(-2 * Math.log(p));
+      ret = (((((c1 * q + c2) * q + c3) * q + c4) * q + c5) * q + c6) /
+            ((((d1 * q + d2) * q + d3) * q + d4) * q + 1);
+    } else if (p <= p_high) {
+      q = p - 0.5;
+      r = q * q;
+      ret = (((((a1 * r + a2) * r + a3) * r + a4) * r + a5) * r + a6) * q /
+            (((((b1 * r + b2) * r + b3) * r + b4) * r + b5) * r + 1);
+    } else {
+      q = Math.sqrt(-2 * Math.log(1 - p));
+      ret = -(((((c1 * q + c2) * q + c3) * q + c4) * q + c5) * q + c6) /
+              ((((d1 * q + d2) * q + d3) * q + d4) * q + 1);
+    }
+    return ret;
+  }
+</script>
+</body>
+</html>

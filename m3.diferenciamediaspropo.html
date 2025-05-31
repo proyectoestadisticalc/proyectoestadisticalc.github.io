@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Prueba de Hipótesis para Diferencia entre Medias y Proporciones</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #000000;
+      margin: 0;
+      padding: 20px;
+      color: white;
+    }
+    h1 {
+      text-align: center;
+      color: #1E90FF;
+      margin-bottom: 5px;
+    }
+    .container {
+      max-width: 700px;
+      background: #111;
+      margin: 20px auto;
+      padding: 25px 30px;
+      box-shadow: 0 2px 15px rgba(30,144,255,0.3);
+      border-radius: 8px;
+      color: white;
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: 600;
+      color: white;
+    }
+    input[type=number], select {
+      width: 100%;
+      margin-top: 6px;
+      padding: 10px 12px;
+      font-size: 1rem;
+      border: 2px solid #1E90FF;
+      border-radius: 8px;
+      background: #222;
+      color: white;
+      box-sizing: border-box;
+    }
+    input[type=number]:focus, select:focus {
+      border-color: #66ccff;
+      outline: none;
+      background: #333;
+      color: white;
+    }
+    .result {
+      margin-top: 30px;
+      padding: 20px;
+      background: #111;
+      border-radius: 8px;
+      border: 1.5px solid #1E90FF;
+      color: white;
+      font-size: 1.1rem;
+      font-family: 'Courier New', Courier, monospace;
+    }
+    button {
+      margin-top: 20px;
+      width: 100%;
+      padding: 14px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: #fff;
+      background-color: #1E90FF;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #007ACC;
+    }
+    .graph-container {
+      margin-top: 30px;
+      height: 350px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Prueba de Hipótesis para Diferencia entre Medias y Proporciones</h1>
+
+    <label for="tipoPrueba">Tipo de prueba:</label>
+    <select id="tipoPrueba">
+      <option value="medias">Diferencia entre medias</option>
+      <option value="proporciones">Diferencia entre proporciones</option>
+    </select>
+
+    <div id="inputsMedias">
+      <label for="xbar1">Media muestra 1 (x̄₁):</label>
+      <input type="number" id="xbar1" step="0.01" />
+
+      <label for="s1">Desviación estándar muestra 1 (s₁):</label>
+      <input type="number" id="s1" step="0.01" min="0" />
+
+      <label for="n1">Tamaño muestra 1 (n₁):</label>
+      <input type="number" id="n1" step="1" min="1" />
+
+      <label for="xbar2">Media muestra 2 (x̄₂):</label>
+      <input type="number" id="xbar2" step="0.01" />
+
+      <label for="s2">Desviación estándar muestra 2 (s₂):</label>
+      <input type="number" id="s2" step="0.01" min="0" />
+
+      <label for="n2">Tamaño muestra 2 (n₂):</label>
+      <input type="number" id="n2" step="1" min="1" />
+    </div>
+
+    <div id="inputsProporciones" style="display:none;">
+      <label for="p1">Proporción muestra 1 (p̂₁):</label>
+      <input type="number" id="p1" step="0.01" min="0" max="1" />
+
+      <label for="n1p">Tamaño muestra 1 (n₁):</label>
+      <input type="number" id="n1p" step="1" min="1" />
+
+      <label for="p2">Proporción muestra 2 (p̂₂):</label>
+      <input type="number" id="p2" step="0.01" min="0" max="1" />
+
+      <label for="n2p">Tamaño muestra 2 (n₂):</label>
+      <input type="number" id="n2p" step="1" min="1" />
+    </div>
+
+    <label for="alpha">Nivel de significancia (α):</label>
+    <input type="number" id="alpha" step="0.001" value="0.05" min="0" max="1" />
+
+    <label for="tipo">Tipo de prueba:</label>
+    <select id="tipo">
+      <option value="left">Una cola izquierda (H₁: diferencia &lt; 0)</option>
+      <option value="right">Una cola derecha (H₁: diferencia &gt; 0)</option>
+      <option value="two">Dos colas (H₁: diferencia ≠ 0)</option>
+    </select>
+
+    <button onclick="calcularHipotesis()">Calcular</button>
+    <button onclick="limpiarCampos()">Limpiar</button>
+    <button onclick="window.location.href='modulo3.html'">Regresar</button>
+
+    <div id="resultado" class="result"></div>
+    <div class="graph-container">
+      <canvas id="canvasGrafica"></canvas>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('tipoPrueba').addEventListener('change', function () {
+      const tipo = this.value;
+      if (tipo === 'medias') {
+        document.getElementById('inputsMedias').style.display = 'block';
+        document.getElementById('inputsProporciones').style.display = 'none';
+      } else {
+        document.getElementById('inputsMedias').style.display = 'none';
+        document.getElementById('inputsProporciones').style.display = 'block';
+      }
+      limpiarCampos();
+    });
+
+    function calcularHipotesis() {
+      const tipoPrueba = document.getElementById('tipoPrueba').value;
+      const alpha = parseFloat(document.getElementById('alpha').value);
+      const tipo = document.getElementById('tipo').value;
+
+      if (tipoPrueba === 'medias') {
+        const xbar1 = parseFloat(document.getElementById('xbar1').value);
+        const s1 = parseFloat(document.getElementById('s1').value);
+        const n1 = parseFloat(document.getElementById('n1').value);
+        const xbar2 = parseFloat(document.getElementById('xbar2').value);
+        const s2 = parseFloat(document.getElementById('s2').value);
+        const n2 = parseFloat(document.getElementById('n2').value);
+
+        if ([xbar1, s1, n1, xbar2, s2, n2, alpha].some(v => isNaN(v))) {
+          alert("Por favor complete todos los campos correctamente.");
+          return;
+        }
+        if (s1 <= 0 || s2 <= 0 || n1 <= 0 || n2 <= 0) {
+          alert("Desviaciones estándar y tamaños de muestra deben ser mayores que 0.");
+          return;
+        }
+
+        const diferencia = xbar1 - xbar2;
+        const se = Math.sqrt((s1 ** 2) / n1 + (s2 ** 2) / n2);
+        const z = diferencia / se;
+
+        mostrarResultado(z, alpha, tipo, diferencia);
+
+      } else {
+        const p1 = parseFloat(document.getElementById('p1').value);
+        const n1 = parseFloat(document.getElementById('n1p').value);
+        const p2 = parseFloat(document.getElementById('p2').value);
+        const n2 = parseFloat(document.getElementById('n2p').value);
+
+        if ([p1, n1, p2, n2, alpha].some(v => isNaN(v))) {
+          alert("Por favor complete todos los campos correctamente.");
+          return;
+        }
+        if (p1 < 0 || p1 > 1 || p2 < 0 || p2 > 1) {
+          alert("Las proporciones deben estar entre 0 y 1.");
+          return;
+        }
+        if (n1 <= 0 || n2 <= 0) {
+          alert("Los tamaños de muestra deben ser mayores que 0.");
+          return;
+        }
+
+        const diferencia = p1 - p2;
+        const se = Math.sqrt((p1 * (1 - p1)) / n1 + (p2 * (1 - p2)) / n2);
+        const z = diferencia / se;
+
+        mostrarResultado(z, alpha, tipo, diferencia);
+      }
+    }
+
+    function mostrarResultado(z, alpha, tipo, diferencia) {
+      let pValue;
+      if (tipo === 'left') {
+        pValue = normalCDF(z);
+      } else if (tipo === 'right') {
+        pValue = 1 - normalCDF(z);
+      } else {
+        pValue = 2 * (1 - normalCDF(Math.abs(z)));
+      }
+
+      let decision = pValue < alpha ? "Se rechaza H₀" : "No se rechaza H₀";
+
+      document.getElementById('resultado').innerHTML =
+        `Estadístico z: ${z.toFixed(4)}<br>` +
+        `Valor-p: ${pValue.toFixed(4)}<br>` +
+        `Diferencia observada: ${diferencia.toFixed(4)}<br>` +
+        `Decisión: <strong>${decision}</strong>`;
+
+      graficar(z, tipo, alpha);
+    }
+
+    function normalCDF(z) {
+      return 0.5 * (1 + erf(z / Math.SQRT2));
+    }
+
+    function erf(x) {
+      const sign = Math.sign(x);
+      x = Math.abs(x);
+      const a1 =  0.254829592;
+      const a2 = -0.284496736;
+      const a3 =  1.421413741;
+      const a4 = -1.453152027;
+      const a5 =  1.061405429;
+      const p  =  0.3275911;
+      const t = 1 / (1 + p * x);
+      const y = 1 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+      return sign * y;
+    }
+
+    function limpiarCampos() {
+      // Limpia todos los inputs
+      ['xbar1','s1','n1','xbar2','s2','n2','p1','n1p','p2','n2p','alpha'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+      document.getElementById('alpha').value = '0.05';
+      document.getElementById('resultado').innerHTML = '';
+      if (window.chartInstance) {
+        window.chartInstance.destroy();
+      }
+    }
+
+    function graficar(z, tipo, alpha) {
+      if(window.chartInstance) window.chartInstance.destroy();
+
+      const ctx = document.getElementById('canvasGrafica').getContext('2d');
+
+      // Crear dominio para Z
+      const minX = -4;
+      const maxX = 4;
+      const step = 0.01;
+      let dataX = [];
+      let dataY = [];
+      for (let x = minX; x <= maxX; x += step) {
+        dataX.push(x);
+        dataY.push(standardNormalPDF(x));
+      }
+
+      // Función para calcular PDF normal estándar
+      function standardNormalPDF(x) {
+        return (1 / Math.sqrt(2 * Math.PI)) * Math.exp(-0.5 * x * x);
+      }
+
+      // Función para generar área sombreada para región crítica
+      function getCriticalRegionPoints(type, alpha) {
+        let regionX = [];
+        let regionY = [];
+        if (type === 'left') {
+          const zAlpha = inverseNormalCDF(alpha);
+          for (let x = minX; x <= zAlpha; x += step) {
+            regionX.push(x);
+            regionY.push(standardNormalPDF(x));
+          }
+        } else if (type === 'right') {
+          const zAlpha = inverseNormalCDF(1 - alpha);
+          for (let x = zAlpha; x <= maxX; x += step) {
+            regionX.push(x);
+            regionY.push(standardNormalPDF(x));
+          }
+        } else { // two tails
+          const zAlphaLow = inverseNormalCDF(alpha / 2);
+          const zAlphaHigh = inverseNormalCDF(1 - alpha / 2);
+          for (let x = minX; x <= zAlphaLow; x += step) {
+            regionX.push(x);
+            regionY.push(standardNormalPDF(x));
+          }
+          for (let x = zAlphaHigh; x <= maxX; x += step) {
+            regionX.push(x);
+            regionY.push(standardNormalPDF(x));
+          }
+        }
+        return {regionX, regionY};
+      }
+
+      // Inversa normal estándar (aproximada)
+      // Utilizamos algoritmo de Moro para invertir CDF normal estándar:
+      // Fuente simplificada para uso inmediato:
+      function inverseNormalCDF(p) {
+        if (p <= 0 || p >= 1) {
+          throw new Error("p debe estar en (0,1)");
+        }
+        // Coeficientes para la aproximación
+        const a = [  -39.6968302866538, 220.946098424521, -275.928510446969,
+                     138.357751867269, -30.6647980661472, 2.50662827745924 ];
+        const b = [ -54.4760987982241, 161.585836858041, -155.698979859887,
+                     66.8013118877197, -13.2806815528857 ];
+        const c = [ -0.00778489400243029, -0.322396458041136, -2.40075827716184,
+                    -2.54973253934373, 4.37466414146497, 2.93816398269878 ];
+        const d = [ 0.00778469570904146, 0.32246712907004, 2.44513413714299,
+                    3.75440866190742 ];
+        // Valores límite
+        const plow = 0.02425;
+        const phigh = 1 - plow;
+        let q, r;
+        if (p < plow) {
+          q = Math.sqrt(-2 * Math.log(p));
+          return (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) /
+                 ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);
+        }
+        if (p > phigh) {
+          q = Math.sqrt(-2 * Math.log(1 - p));
+          return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) /
+                  ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);
+        }
+        q = p - 0.5;
+        r = q * q;
+        return (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q /
+               (((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1);
+      }
+
+      const critical = getCriticalRegionPoints(tipo, alpha);
+
+      // Dataset principal - Curva normal estándar
+      const datasets = [{
+        label: 'Distribución Normal Estándar',
+        data: dataX.map((x,i) => ({x: x, y: dataY[i]})),
+        borderColor: '#1E90FF',
+        borderWidth: 2,
+        fill: false,
+        pointRadius: 0,
+        tension: 0.3
+      }];
+
+      // Dataset área crítica
+      if (tipo === 'two') {
+        // Dos áreas: izquierda y derecha
+        const leftArea = {
+          label: 'Región crítica (α/2 izquierda)',
+          data: critical.regionX.filter(x => x <= inverseNormalCDF(alpha / 2)).map(x => ({x: x, y: standardNormalPDF(x)})),
+          borderWidth: 0,
+          backgroundColor: 'rgba(30,144,255,0.35)',
+          fill: true,
+          stepped: false,
+          pointRadius: 0,
+          showLine: true
+        };
+        const rightArea = {
+          label: 'Región crítica (α/2 derecha)',
+          data: critical.regionX.filter(x => x >= inverseNormalCDF(1 - alpha / 2)).map(x => ({x: x, y: standardNormalPDF(x)})),
+          borderWidth: 0,
+          backgroundColor: 'rgba(30,144,255,0.35)',
+          fill: true,
+          stepped: false,
+          pointRadius: 0,
+          showLine: true
+        };
+        datasets.push(leftArea);
+        datasets.push(rightArea);
+      } else {
+        datasets.push({
+          label: 'Región crítica',
+          data: critical.regionX.map((x,i) => ({x: x, y: critical.regionY[i]})),
+          borderWidth: 0,
+          backgroundColor: 'rgba(30,144,255,0.35)',
+          fill: true,
+          stepped: false,
+          pointRadius: 0,
+          showLine: true
+        });
+      }
+
+      // Línea vertical para el estadístico z
+      datasets.push({
+        label: 'Valor z observado',
+        data: [{x: z, y: 0}, {x: z, y: standardNormalPDF(z)}],
+        borderColor: '#00FFFF',
+        borderWidth: 3,
+        fill: false,
+        pointRadius: 0,
+        showLine: true,
+        stepped: false,
+        borderDash: [6,4]
+      });
+
+      window.chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          datasets: datasets
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              type: 'linear',
+              min: minX,
+              max: maxX,
+              title: {
+                display: true,
+                text: 'Valor z',
+                color: '#1E90FF',
+                font: {size: 16, weight: 'bold'}
+              },
+              grid: {
+                color: '#333'
+              },
+              ticks: {
+                color: '#1E90FF',
+                font: {size: 14}
+              }
+            },
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Densidad de Probabilidad',
+                color: '#1E90FF',
+                font: {size: 16, weight: 'bold'}
+              },
+              grid: {
+                color: '#333'
+              },
+              ticks: {
+                color: '#1E90FF',
+                font: {size: 14}
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              labels: {
+                color: '#1E90FF',
+                font: {size: 14}
+              }
+            },
+            tooltip: {
+              enabled: true,
+              backgroundColor: '#1E90FF',
+              titleColor: '#fff',
+              bodyColor: '#fff'
+            }
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>

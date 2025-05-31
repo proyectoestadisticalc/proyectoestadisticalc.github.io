@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Prueba de Hipótesis para Medias Dependientes</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.4.0/dist/chartjs-plugin-annotation.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jstat/1.9.4/jstat.min.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #000;
+      margin: 0;
+      padding: 20px;
+      color: white;
+    }
+    h1 {
+      text-align: center;
+      color: #1E90FF;
+      margin-bottom: 5px;
+    }
+    .container {
+      max-width: 700px;
+      background: #111;
+      margin: 20px auto;
+      padding: 25px 30px;
+      box-shadow: 0 2px 15px rgba(30,144,255,0.3);
+      border-radius: 8px;
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: 600;
+    }
+    input[type=number], select {
+      width: 100%;
+      margin-top: 6px;
+      padding: 10px 12px;
+      font-size: 1rem;
+      border: 2px solid #1E90FF;
+      border-radius: 8px;
+      background: #222;
+      color: white;
+      box-sizing: border-box;
+      transition: border-color 0.3s;
+    }
+    input[type=number]:focus, select:focus {
+      border-color: #66ccff;
+      outline: none;
+      background: #333;
+    }
+    input.invalid {
+      border-color: #FF4136 !important;
+    }
+    .result {
+      margin-top: 30px;
+      padding: 20px;
+      background: #111;
+      border-radius: 8px;
+      border: 1.5px solid #1E90FF;
+      font-size: 1.1rem;
+      font-family: 'Courier New', Courier, monospace;
+      white-space: pre-wrap;
+      min-height: 100px;
+    }
+    button {
+      margin-top: 20px;
+      width: 100%;
+      padding: 14px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: #fff;
+      background-color: #1E90FF;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #007ACC;
+    }
+    .graph-container {
+      margin-top: 30px;
+      height: 350px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Prueba de Hipótesis para Medias Dependientes</h1>
+    <label for="mediaD">Media de las diferencias (𝑑̄)</label>
+    <input type="number" id="mediaD" step="any" >
+
+    <label for="desvD">Desviación estándar de las diferencias (s)</label>
+    <input type="number" id="desvD" step="any" >
+
+    <label for="n">Tamaño de la muestra (n)</label>
+    <input type="number" id="n" step="1" min="2">
+
+    <label for="mediaH0">Media bajo H₀ (μ<sub>d</sub>)</label>
+    <input type="number" id="mediaH0" step="any" value="0">
+
+    <label for="alfa">Nivel de significancia (α)</label>
+    <input type="number" id="alfa" step="any" value="0.05" min="0.0001" max="0.9999">
+
+    <label for="cola">Tipo de prueba</label>
+    <select id="cola">
+      <option value="≠" selected>Bilateral</option>
+      <option value=">">Una cola (derecha)</option>
+      <option value="<">Una cola (izquierda)</option>
+    </select>
+
+    <button onclick="calcular()">Calcular</button>
+    <button onclick="limpiar()">Limpiar</button>
+    <button onclick="window.location.href = 'modulo3.html'">Regresar</button> 
+
+    <div class="result" id="resultado"></div>
+    <div class="graph-container"><canvas id="grafico"></canvas></div>
+  </div>
+
+  <script>
+    Chart.register(window['chartjs-plugin-annotation']);
+    let grafico = null;
+
+    // Función para validar y marcar inputs
+    function validarCampos() {
+      let valid = true;
+
+      const mediaD = document.getElementById("mediaD");
+      const desvD = document.getElementById("desvD");
+      const n = document.getElementById("n");
+      const mediaH0 = document.getElementById("mediaH0");
+      const alfa = document.getElementById("alfa");
+
+      // Validar mediaD
+      if (isNaN(parseFloat(mediaD.value))) {
+        mediaD.classList.add("invalid");
+        valid = false;
+      } else {
+        mediaD.classList.remove("invalid");
+      }
+
+      // Validar desvD
+      if (isNaN(parseFloat(desvD.value)) || parseFloat(desvD.value) <= 0) {
+        desvD.classList.add("invalid");
+        valid = false;
+      } else {
+        desvD.classList.remove("invalid");
+      }
+
+      // Validar n
+      const nVal = parseInt(n.value);
+      if (isNaN(nVal) || nVal < 2) {
+        n.classList.add("invalid");
+        valid = false;
+      } else {
+        n.classList.remove("invalid");
+      }
+
+      // Validar mediaH0
+      if (isNaN(parseFloat(mediaH0.value))) {
+        mediaH0.classList.add("invalid");
+        valid = false;
+      } else {
+        mediaH0.classList.remove("invalid");
+      }
+
+      // Validar alfa
+      const alfaVal = parseFloat(alfa.value);
+      if (isNaN(alfaVal) || alfaVal <= 0 || alfaVal >= 1) {
+        alfa.classList.add("invalid");
+        valid = false;
+      } else {
+        alfa.classList.remove("invalid");
+      }
+
+      return valid;
+    }
+
+    function calcular() {
+      if (!validarCampos()) {
+        document.getElementById("resultado").innerText = "Por favor, corrige los campos en rojo antes de calcular.";
+        if (grafico) {
+          grafico.destroy();
+          grafico = null;
+        }
+        return;
+      }
+
+      const mediaD = parseFloat(document.getElementById("mediaD").value);
+      const desvD = parseFloat(document.getElementById("desvD").value);
+      const n = parseInt(document.getElementById("n").value);
+      const mediaH0 = parseFloat(document.getElementById("mediaH0").value);
+      const alfa = parseFloat(document.getElementById("alfa").value);
+      const cola = document.getElementById("cola").value;
+
+      const df = n - 1;
+      const se = desvD / Math.sqrt(n);
+      const t = (mediaD - mediaH0) / se;
+
+      let p;
+      if (cola === "≠") {
+        p = 2 * (1 - jStat.studentt.cdf(Math.abs(t), df));
+      } else if (cola === ">") {
+        p = 1 - jStat.studentt.cdf(t, df);
+      } else {
+        p = jStat.studentt.cdf(t, df);
+      }
+
+      const rechaza = p < alfa;
+      const tCrit = jStat.studentt.inv(1 - (cola === "≠" ? alfa / 2 : alfa), df);
+      const margen = tCrit * se;
+      const limInf = mediaD - margen;
+      const limSup = mediaD + margen;
+
+      let texto = `t = ${t.toFixed(4)}\n`;
+      texto += `gl = ${df}\n`;
+      texto += `p-valor = ${p.toFixed(4)}\n`;
+      texto += `IC ${(1 - alfa) * 100}%: (${limInf.toFixed(4)}, ${limSup.toFixed(4)})\n`;
+      texto += rechaza ? "Se rechaza H₀" : "No se rechaza H₀";
+
+      document.getElementById("resultado").innerText = texto;
+      graficar(t, df, cola, alfa);
+    }
+
+    function graficar(tObs, df, cola, alfa) {
+      const ctx = document.getElementById('grafico').getContext('2d');
+      if (grafico) grafico.destroy();
+
+      const xVals = [];
+      const yVals = [];
+      for (let x = -5; x <= 5; x += 0.1) {
+        xVals.push(parseFloat(x.toFixed(2)));
+        yVals.push(jStat.studentt.pdf(x, df));
+      }
+
+      const tCrit = jStat.studentt.inv(1 - alfa / (cola === "≠" ? 2 : 1), df);
+
+      let annotations = {
+        lineaT: {
+          type: 'line',
+          xMin: tObs,
+          xMax: tObs,
+          borderColor: '#FF4136',
+          borderWidth: 2,
+          label: {
+            content: `t = ${tObs.toFixed(2)}`,
+            enabled: true,
+            position: 'start',
+            color: 'white',
+            font: { weight: 'bold' }
+          }
+        }
+      };
+
+      if (cola === "≠") {
+        annotations.critDer = {
+          type: 'line',
+          xMin: tCrit,
+          xMax: tCrit,
+          borderColor: '#00FF00',
+          borderWidth: 2,
+          borderDash: [5, 5],
+          label: { content: '+t crítico', enabled: true, color: 'white' }
+        };
+        annotations.critIzq = {
+          type: 'line',
+          xMin: -tCrit,
+          xMax: -tCrit,
+          borderColor: '#00FF00',
+          borderWidth: 2,
+          borderDash: [5, 5],
+          label: { content: '-t crítico', enabled: true, color: 'white' }
+        };
+      } else {
+        annotations.crit = {
+          type: 'line',
+          xMin: cola === ">" ? tCrit : -tCrit,
+          xMax: cola === ">" ? tCrit : -tCrit,
+          borderColor: '#00FF00',
+          borderWidth: 2,
+          borderDash: [5, 5],
+          label: {
+            content: 't crítico',
+            enabled: true,
+            color: 'white'
+          }
+        };
+      }
+
+      grafico = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: xVals,
+          datasets: [{
+            label: 'Distribución t',
+            data: yVals,
+            borderColor: '#1E90FF',
+            backgroundColor: 'rgba(30,144,255,0.2)',
+            fill: true,
+            pointRadius: 0,
+            borderWidth: 2,
+            tension: 0.3
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: {
+              type: 'linear',
+              position: 'bottom',
+              ticks: { color: 'white', maxTicksLimit: 11 },
+              grid: { color: '#333' }
+            },
+            y: {
+              ticks: { color: 'white' },
+              grid: { color: '#333' },
+              beginAtZero: true
+            }
+          },
+          plugins: {
+            legend: { labels: { color: 'white' } },
+            annotation: {
+              annotations: annotations
+            }
+          }
+        },
+        plugins: [Chart.registry.getPlugin('annotation')]
+      });
+    }
+
+    function limpiar() {
+      ["mediaD", "desvD", "n"].forEach(id => document.getElementById(id).value = "");
+      document.getElementById("mediaH0").value = "0";
+      document.getElementById("alfa").value = "0.05";
+      document.getElementById("cola").value = "≠";
+      document.getElementById("resultado").innerText = "";
+      if (grafico) {
+        grafico.destroy();
+        grafico = null;
+      }
+      
+      ["mediaD", "desvD", "n", "mediaH0", "alfa"].forEach(id => document.getElementById(id).classList.remove("invalid"));
+    }
+
+   
+    ["mediaD", "desvD", "n", "mediaH0", "alfa"].forEach(id => {
+      document.getElementById(id).addEventListener("input", () => {
+        validarCampos();
+        document.getElementById("resultado").innerText = "";
+        if (grafico) {
+          grafico.destroy();
+          grafico = null;
+        }
+      });
+    });
+
+    window.onload = limpiar; 
+  </script>
+</body>
+</html>
